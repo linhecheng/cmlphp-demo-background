@@ -1,0 +1,39 @@
+/** kit_admin-v1.0.9 MIT License By http://kit/zhengjinfan.cn e-mail:zheng_jinfan@126.com */
+.kit-theme .kit-nav .layui-nav-item a{color:#fff}
+.thrid-level {
+    background-color: #282B33 !important;
+}
+
+/*小箭头方向处理*/
+/*合起来是向下*/
+.nav-close{
+    content: '';
+    width: 0;
+    height: 0;
+    border-style: solid dashed dashed;
+    border-color: #FFFFFF transparent transparent;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all .2s;
+    -webkit-transition: all .2s;
+    position: absolute;
+    top: 18px;
+    right: 10px;
+    border-width: 6px;
+}
+/*展开的是向上*/
+.nav-open{
+    content: '';
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-transition: all .2s;
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    margin-top: -9px;
+    border-style: dashed dashed solid;
+    border-width: 6px;
+    border-color: transparent transparent #FFFFFF;
+}

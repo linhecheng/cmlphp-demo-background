@@ -1,0 +1,8 @@
+<?php
+namespace $namespace\Controller$component;
+
+use Cml\Controller;
+
+class $className extends Controller
+{
+}

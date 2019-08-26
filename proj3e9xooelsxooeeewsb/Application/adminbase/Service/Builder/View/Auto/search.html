@@ -1,0 +1,161 @@
+<script type="text/x-template" class="search_pop">
+<div class="search_pop_content">
+    <style>
+        .layui-form-selected dl {
+            z-index: 199999999
+        }
+        .auto_builder_filter div.layui-form-item {display: inline-block;}
+        .auto_builder_filter div.layui-form-item .layui-form-label { width:30px; }
+    </style>
+    <fieldset class="layui-elem-field auto_builder_filter">
+        <legend>条件筛选</legend>
+        <form role="form" class="layui-form search_form" onsubmit="return false;">
+            <div class="row" v-for="(row, i) in rows">
+                <div class="layui-form-item">
+                    <label class="layui-form-label" style="width:80px;">逻辑运算符:</label>
+                    <div class="layui-input-block" style="width:100px;">
+                        <select :name="'logical['+i+']'" class="src" lay-verify="required" :disabled="i<1" v-model="row.logic" lay-filter="logic">
+                            <option value="AND"> AND</option>
+                            <option value="OR"> OR</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">键:</label>
+                    <div class="layui-input-block" style="width:150px;margin-left:60px;">
+                        <select :name="'field['+i+']'"  :data-id="i" lay-filter="field" v-model="row.field">
+                            <option v-for="field in fields" :value="field.Field">{{field.field__label}}{{field.Key ?'【索引】':''}}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label" style="width:60px;">运算符:</label>
+                    <div class="layui-input-block" style="width:120px;margin-left:90px;">
+                        <select :name="'where['+i+']'" lay-verify="required" lay-filter="where"  :data-id="i" v-model="row.where">
+                            <option v-for="(where, key) in whereMap" :value="key">{{key}}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">值:</label>
+                    <div class="layui-input-block" style="width:250px;margin-left:60px;">
+                        <input type="text" :name="'value['+i+']'" lay-filter="value" v-model="row.value" v-show="row.type > 8" :disabled="row.type <= 8" :class="'value_'+i" :placeholder="row.placeholder" class="layui-input" />
+                        <input type="text" :name="'value['+i+']'" lay-filter="value" v-model="row.value"  v-show="row.type <= 8"  :disabled="row.type>8"  :placeholder="row.placeholder" class="layui-input"/>
+                    </div>
+                </div>
+
+                <button class="layui-btn layui-btn-sm layui-btn-normal myclear" style="margin-left:30px;"
+                       @click="rmRow(i)"><i class="layui-icon"></i> 清除
+                </button>
+            </div>
+
+            <button class="lay-submit" style="display:none;" lay-submit>保存</button>
+            <!-- /.box-body -->
+        </form>
+
+        <div class="layui-input-block" style="padding-left:5px;">
+            <button type="button" class="layui-btn layui-btn-sm " @click="addRow();">新增</button>
+        </div>
+    </fieldset>
+</div>
+</script>
+<div class="auto_builder_filter_box">
+<script type="text/javascript" >
+    var vm = new Vue({
+        el: ".auto_builder_filter",
+        data:window.search_filter ? window.search_filter : {
+            'fields' : JSON.parse('{{$fields}}'),
+            'whereMap': JSON.parse('{{$whereMap}}'),
+            'rows':[{
+                logic:'AND',
+                field:'{{$default_field}}',
+                where:'=',
+                value:'',
+                type:0,
+                placeholder:''
+            }]
+        }
+        ,methods: {
+            showDate: function(i, type) {
+                layui.use('laydate', function() {
+                    layui.laydate.render({
+                        elem: '.value_'+i
+                        ,format: (type == 9 ? 'yyyy-MM-dd' :  'yyyy-MM-dd HH:mm:ss')//可任意组合
+                    });
+                })
+            }
+            ,addRow: function() {
+                this.rows.push({
+                    logic:'AND',
+                    field:'{{$default_field}}',
+                    where:'=',
+                    value:'',
+                    type:0
+                });
+            }
+            ,rmRow: function(i) {
+                this.rows.splice(i, 1);
+            }
+        }
+        ,mounted: function () {
+            var self = this;
+            layui.use(['form'], function () {
+                form = layui.form;
+                form.on('select', function (data) {
+                    var filter = $(data.elem).attr('lay-filter');
+                    var index = $(data.elem).data('id');
+
+                    switch (filter) {
+                        case 'field':
+                            for(var i = 0; i < self.fields.length; i++) {
+                                var row = self.fields[i];
+                                if (row.Field == data.value) {
+                                    self.$set(self.rows[index], 'type', row.field__type);
+                                    self.showDate(index, row.field__type);
+                                }
+                            }
+                            break;
+                        case 'where':
+                            for(var item in self.whereMap) {
+                                if (item == data.value) {
+                                    self.$set(self.rows[$(data.elem).data('id')], 'placeholder', self.whereMap[item].placeholder);
+                                }
+                            }
+                            break;
+                    }
+
+                    self.$set(self.rows[index], filter, data.value);
+                });
+                form.render();
+            });
+        }
+        ,updated: function () {
+            window.search_filter = this.$data;
+            form.render();
+        }
+    });
+</script>
+</div>
+
+<script>
+layui.use(['cml', 'form'], function() {
+    $('body').on('.search_pop_content input').unbind('keydown').bind('keydown', function (event) {
+        if (event.keyCode == "13") {
+            event.preventDefault();
+        }
+    });
+
+    var cml = layui.cml;
+    window.search_filter = null;
+    $('.grid-filter').on('click', function() {
+        cml.layerWidth = ['1100px', '50%'];
+        cml.showPopBox($('.search_pop').html() + $('.auto_builder_filter_box').html(), 1, '筛选', function() {
+            cml.loadAjaxPage(cml.initPageUrl + 'page=1&' + $('.search_form').serialize(), 1);
+            $('.layui-layer-content > .search_pop_content').remove();
+        });
+    });
+});
+</script>

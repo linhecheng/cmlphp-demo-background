@@ -1,0 +1,67 @@
+<style>
+    .layui-form-selected dl {z-index:199999999}
+    /* .layui-input {width:80%}*/
+</style>
+<fieldset class="layui-elem-field form_fieldset">
+    <legend>{{$title}}</legend>
+    <form role="form" class="data_forum layui-form" onsubmit="return false;">
+        {{loop $table $item}}
+
+        {{if $item[0]['type'] ==  'block_tip'}}
+        <blockquote style="background-color: #FF5722;color:white;font-size:16px;padding:5px;">
+            {{$item[0]['tip'] }}
+        </blockquote>
+        {{elseif $item[0]['type'] == 'hidden' }}
+        <input type="hidden" name="{{$item[0]['name']}}" value="{{$data[$item[0]['name']]}}" {{$item[0]['other']}} class="layui-input {{$item[0]['class']}}"  />
+        {{else}}
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{$item[0]['label']}}</label>
+            <div class="layui-input-block" style="width:70%">
+                {{loop $item $row}}
+                {{if $row['type'] == 'select'}}
+                <select name="{{$row.name}}" {{$row.other}} class="{{$row.class}}">
+                    {{$row.options}}
+                </select>
+                {{elseif $row['type'] == 'textarea' }}
+                <textarea name="{{$row.name}}" {{$row.other}} placeholder="{{$row.placeholder}}" class="layui-textarea {{$row.class}}">{{$data[$row['name']]}}</textarea>
+                {{elseif in_array($row['type'], ['editor', 'ueditor']) }}
+                <textarea name="{{$row.name}}" {{$row.other}} id="editor_{{$row.name}}"  placeholder="{{$row.placeholder}}" class="layui-textarea {{$row.class}}">{{$data[$row['name']]}}</textarea>
+                {{elseif in_array($row['type'], ['checkbox', 'radio'])}}
+                <input type="{{$row.type}}" {{$row.other}} class="layui-input {{$row.class}}" name="{{$row.name}}" value="{{$row.options}}" {{if isset($data[$row['name']]) && (is_array($data[$row['name']]) ? in_array($row['options'], $data[$row['name']]) : $data[$row['name']] == $row['options'])}} checked {{/if}} title="{{$row.placeholder}}">
+                {{elseif $row['type'] == 'image'}}
+                <img {{if !$data[$row['name']]}} class="layui-hide" {{else}} src="{{public}}{{$data[$row['name']]}}" {{/if}}  style="max-width:50px;max-height: 50px;" />
+                <button class="layui-btn imageup_{{$row.name}}" type="button">选择图片</button>
+                <input type="hidden" name="{{$row.name}}" class="imageup {{$row.class}} " value="{{$data[$row['name']]}}" />
+                {{elseif $row['type'] == 'file'}}
+                <a href="{{echo $data[$row['name']] ? $data[$row['name']] : 'javascript:;'}}" style="text-overflow: ellipsis;max-width: 100%;" target="_blank">{{$data[$row['name']]}}</a>
+                <button class="layui-btn imageup_{{$row.name}}" type="button">选择文件</button>
+                <input type="hidden" name="{{$row.name}}" class="imageup {{$row.class}} " value="{{$data[$row['name']]}}" />
+                {{else}}
+                <input type="{{$row.type}}" name="{{$row.name}}" value="{{if $row['type'] != 'password'}}{{$data[$row['name']]}}{{/if}}" placeholder="{{$row.placeholder}}"  {{$row.other}} class="layui-input {{$row.class}}"  />
+                {{/if}}
+                {{/loop}}
+            </div>
+        </div>
+        {{/if}}
+
+        {{/loop}}
+
+        {{comment  <input type="hidden" name="id" value="{{$data.id}}">}}
+
+        <button class="lay-submit" style="display:none;" lay-submit>保存</button>
+        <!-- /.box-body -->
+    </form>
+</fieldset>
+<!-- form start -->
+
+<script type="text/javascript">
+    {{$toPageJs}}
+</script>
+
+{{loop $neeIncludeJs $js}}
+<script type="text/javascript" charset="utf-8" src="{{assert $js}}"></script>
+{{/loop}}
+
+<script type="text/javascript">
+    {{$toPageJsAfterInclude}}
+</script>

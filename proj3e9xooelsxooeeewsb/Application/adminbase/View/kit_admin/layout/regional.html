@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="minimal-ui,target-densitydpi=device-dpi, width=1334, user-scalable=no"  />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="format-detection" content="telephone=no, email=no" />
+    <!-- UC默认竖屏 ，UC强制全屏 -->
+    <meta name="full-screen" content="yes" />
+    <meta name="browsermode" content="application" />
+    <!-- QQ强制竖屏 QQ强制全屏 -->
+    <meta name="x5-orientation" content="portrait" />
+    <meta name="x5-fullscreen" content="true" />
+    <meta name="x5-page-mode" content="app" />
+    <title>{{echo $title?:\Cml\Config::get('system_name');}} </title>
+    <link rel="stylesheet" href="{{assert adminbase/kit_admin/plugins/layui/css/layui.css}}" media="all" />
+    <link rel="stylesheet" href="{{assert adminbase/kit_admin/plugins/font-awesome/css/font-awesome.min.css}}" media="all" />
+    <link rel="stylesheet" href="{{assert adminbase/kit_admin/build/css/app.css}}" media="all" />
+    <link rel="stylesheet" href="{{assert adminbase/kit_admin/build/css/themes/green.css}}" media="all" id="skin" kit-skin />
+    <style>
+        .forum-common {
+            padding: 6px 15px;
+        }
+
+        .show_page {
+            display: inline-block;
+            line-height: 24px;
+        }
+
+        .page_bar {
+            line-height:55px;
+            min-height: 55px;
+            width: 100%;
+            background-color: #fbfbfb;
+            border-bottom: 1px solid rgb(221, 221, 221);
+        }
+
+        .tot-num{color:red;font-weight: bold;display:inline-block;}
+
+        .template {display:none;}
+        .data_form_box {word-break: break-all;word-wrap: break-word;}
+        .layui-btn+.layui-btn {margin-top:1px;margin-bottom: 1px;}
+        .layui-elem-field  button.layui-btn {margin-left:5px;}
+        .hide {display:none;}
+    </style>
+    {{block css}}{{/block}}
+</head>
+
+<body>
+{{block content}}{{/block}}
+</body>
+
+<script type="text/javascript" src="{{assert adminbase/kit_admin/plugins/jquery-2.2.3.min.js}}"></script>
+<script src="{{assert adminbase/kit_admin/plugins/layui/layui.js}}"></script>
+<script src="{{assert adminbase/kit_admin/plugins/vue.min.js}}"></script>
+
+{{block includejs}}{{/block}}
+
+
+<script>
+    var layui_base_url = '{{assert adminbase/kit_admin/build/js/}}';
+    layui.config({
+        base: layui_base_url
+    });
+    $ = layui.jquery;
+ /*   $ = layui.$;
+    jQuery = layui.$;*/
+</script>
+
+{{block js}}{{/block}}
+
+</html>

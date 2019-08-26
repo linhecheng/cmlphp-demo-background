@@ -1,0 +1,61 @@
+<link rel="stylesheet" href="{{assert adminbase/kit_admin/plugins/ztree/zTreeStyle/zTreeStyle.css}}"/>
+
+<div style="width: 500px; min-height:500px;">
+    {{if $type == 1}}
+        <p style="padding:10px;">
+            <b style="font-size:18px;color:red;">注意：</b>
+            正常情况我们只需要新建用户组，然后把多个用户分配到某个用户组里。给用户组授权，这样所有在该用户组下的用户就有了用户组的所有权限。
+            <br/>
+            但是在某些情况下，比如某个用户组里有100个成员。我们想给其中某个用户单独多两个菜单权限。这时候正常流程是要给这个用户单独建个组。再把用户分配到新的用户组。再给用户组加权限。
+            这样比较繁琐，所以在这里也可以给用户单独加权限。
+            <br />
+            <b style="font-size:14px;color:red;">这边加的用户权限是独立的，也是就是说用户在用户组里的权限这里不显示打勾。但是其实用户是有用户组下的所有权限的。这边只要单独勾选想给用户单独添加的权限即可。</b>
+        </p>
+    {{/if}}
+    <ul class="ztree" id="acl_list">
+
+    </ul>
+</div>
+<form role="form"  class="data_forum">
+    <input type="hidden" name="ids" id="acl_user_ids" />
+    <input type="hidden" name="id" value="{{$item.id}}" />
+    <button class="lay-submit" style="display:none;" lay-submit>保存</button>
+</form>
+
+<script src="{{assert adminbase/kit_admin/plugins/ztree/jquery.ztree.all-3.5.min.js}}"></script>
+<script type="text/javascript">
+    function getCheckedNodes(e, treeId, treeNode) {
+        var nodes = zTreeObj.getCheckedNodes(true);
+        var aclid = '';
+        for(var index in nodes) {
+            if (nodes.hasOwnProperty(index)) {
+                aclid = aclid + nodes[index].id + ','
+            }
+        }
+
+        $("#acl_user_ids").val(aclid);
+    }
+
+    var setting = {
+        check: {
+            enable: true,
+            chkboxType : { "Y" : "s", "N" : "ps"}
+        },
+        data: {
+            key: {
+                name: "title"
+            },
+            simpleData: {
+                enable: true,
+                pIdKey: "pid"
+            }
+        },
+        callback: {
+            onCheck: getCheckedNodes
+        }
+    };
+    var zNodes = {{echo json_encode($menus)}};
+
+    zTreeObj = $.fn.zTree.init($("#acl_list"), setting, zNodes);
+    getCheckedNodes();
+</script>

@@ -1,0 +1,166 @@
+{{to content}}
+<style>
+  .nowrap{max-width:200px;white-space:nowrap;text-overflow:ellipsis;word-break:break-all;overflow:hidden}
+</style>
+<!-- /.box-header -->
+<fieldset class="layui-elem-field">
+    <legend>
+        {{$topTitle}}
+        {{if !isset($_GET['full']) }}<button class="layui-btn layui-btn-sm open_full_screen">全屏</button>{{/if}}
+        <button class="layui-btn layui-btn-sm layui-btn-primary reload_page"><i class="layui-icon">&#xe669;</i></button>
+    </legend>
+
+    <div class="layui-inline forum-common">
+        <form class="layui-form search_form" action="">
+            {{loop $buttons $button}}
+            <div class="layui-input-inline" style="padding-left:5px;">
+                {{if in_array($button['type'], ['add', 'edit']) }}
+                <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} onclick="cml.form.{{$button.type}}('{{$button.title}}','{{url "{$button['url']}"}}','{{url "{$button['saveUrl']}"}}', {{echo $button['width'] ? $button['width'] : 'false';}});">{{$button.text}}</button>
+                {{elseif in_array($button['type'], ['del', 'disable']) }}
+                <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} onclick="cml.form.{{$button.type}}('{{url "{$button['url']}"}}','{{$button.title}}','$button['saveUrl']');">{{$button.text}}</button>
+                {{elseif $button['type'] == 'newTab'}}
+                <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} onclick="window.parent.tab.tabAdd({href:'{{url "{$button['url']}"}}',title:'{{$button.title}}'});">{{$button.text}}</button>
+                {{/if}}
+            </div>
+            {{/loop}}
+
+            {{if count($buttons) > 0}}
+            <div class="layui-input-inline" style="width:20px;"></div>
+            {{/if}}
+            {{loop $search $input}}
+            <div class="layui-input-inline">
+                {{if $input['type'] == 'select' }}
+                <select name="{{$input.name}}" {{$input.other}} class="{{$input.class}}">
+                    {{$input.val}}
+                </select>
+                {{elseif $input['type'] == 'textarea' }}
+                <textarea name="{{$input.name}}" {{$input.other}} placeholder="{{$input.placeholder}}" class="layui-textarea">{{echo $$input['name']}}</textarea>
+                {{elseif $input['type'] == 'editor' }}
+                <textarea name="{{$input.name}}" {{$input.other}} placeholder="{{$input.placeholder}}" id="editor_{{$input.name}}" class="layui-textarea" style="display: none;">{{echo $$input['name'] ? $$input['name'] : $input['val']}}</textarea>
+                {{elseif in_array($input['type'], ['checkbox', 'radio'])}}
+                <input type="{{$input.type}}" {{$input.other}} class="layui-input {{$input.class}}" name="{{$input.name}}" value="{{$input.val}}" {{if $input['val'] && $$input['name'] == $input['val']}} checked {{/if}} title="{{$input.placeholder}}">
+                {{else}}
+                <input type="{{$input.type}}" {{$input.other}} class="layui-input {{$input.class}}" name="{{$input.name}}" value="{{echo $$input['name'] ? $$input['name'] : $input['val']}}" placeholder="{{$input.placeholder}}">
+                {{/if}}
+            </div>
+            {{/loop}}
+
+            {{if count($search) > 0}}
+            <div class="layui-input-inline">
+                <button type="button" class="layui-btn layui-btn-sm layui-btn-primary btn-search">
+                    <i class="layui-icon">&#xe615;</i>
+                </button>
+            </div>
+            {{/if}}
+
+        </form>
+    </div>
+
+    <div class="data_form_box">
+        <div class="layui-field-box">
+            <table class="layui-table">
+                <thead>
+                <tr>
+                    {{loop $table $column}}
+                    <th>{{$column.text}}</th>
+                    {{/loop}}
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="template" v-for="item in list">
+                    {{loop $table $column}}
+                    <td {{$column.other}}>
+                        {{if $column['type'] == 1 }}
+                        {{item.{{$column.name}}}}
+                        {{elseif $column['type'] == 2}}
+                        <button class="layui-btn layui-btn-sm layui-btn-radius layui-btn-danger" v-show="item.{{$column.name}}==1">进行中</button>
+                        <button class="layui-btn layui-btn-sm layui-btn-radius layui-btn-warm" v-show="item.{{$column.name}}==2">待发布</button>
+                        <button class="layui-btn layui-btn-sm layui-btn-radius layui-btn-normal" v-show="item.{{$column.name}}==3">已下线</button>
+                        <!--<i class="layui-icon" v-bind:class="{danger: !item.{{$column.name}} }">{{ item.{{$column.name}} ? '&#xe605;' : '&#x1006;' }}</i>-->
+                        {{elseif $column['type'] ==3 }}
+                        {{loop $column['buttons'] $button}}
+                        {{if in_array($button['type'], ['add', 'edit']) }}
+                        <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} @click.prevent="{{$button.type}}('{{$button.title}}', '{{url "{$button['url']}"}}{{urldeper}}{{$column.id}}=' + item.{{$column.id}},'{{url "{$button['saveUrl']}"}}', {{echo isset($button['width']) ? $button['width'] : 'false';}});">{{$button.text}}</button>
+                        {{elseif $button['type'] == 'del' }}
+                        <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} @click.prevent="del('{{url "{$button['url']}"}}{{urldeper}}{{$column.id}}=' + item.{{$column.id}}, item.{{$column.id}}, '{{$button.saveUrl}}');">{{$button.text}}</button>
+                        {{elseif $button['type'] == 'disable' }}
+                        <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} @click.prevent="disable('{{url "{$button['url']}"}}{{urldeper}}{{$column.id}}=' + item.{{$column.id}} + '&{{$button.saveUrl}}=' + item.{{$button.saveUrl}}, '{{$button.title}}');">{{$button.text}}</button>
+                        {{elseif $button['type'] == 'newTab'}}
+                        <button type="button" class="layui-btn layui-btn-sm {{$buttonclass}}" {{$button.other}} @click.prevent="newTab('{{url "{$button['url']}"}}{{urldeper}}{{$column.id}}=' + item.{{$column.id}}, '{{$button.title}}');">{{$button.text}}</button>
+                        {{/if}}
+                        {{/loop}}
+                        {{elseif $column['type'] == 5}}
+                        <input type="checkbox" :value="item.{{$column.name}}" v-model="checkedIds">
+                        {{elseif $column['type'] == 6}}
+                        <img v-bind:src='item.{{$column.name}}' style="width: 50px;"  class="a"/>
+                        {{elseif $column['type'] == 7}}
+                        <a v-bind:href="item.{{$column.name}}" target="_blank">{{item.{{$column.name}}}}</a>
+                        {{elseif $column['type'] == 8}}
+                        <div v-html="item.{{$column.name}}" class='test nowrap' style=""></div>
+                        <!--<span v-html="item.{{$column.name}}"></span>-->
+                        {{/if}}
+                    </td>
+                    {{/loop}}
+                </tr>
+                </tbody>
+            </table>
+            {{if $checkAll !== false}}
+            <div>
+                <button class="layui-btn layui-btn-sm" @click.prevent="checkAll">全选</button>
+                {{loop $checkAll['buttons'] $button}}
+                {{if $button['type'] == 'del' }}
+                <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} @click.prevent="allDel('{{url "{$button['url']}"}}{{urldeper}}');">{{$button.text}}</button>
+                {{elseif $button['type'] == 'disable' }}
+                <button type="button" class="layui-btn layui-btn-sm {{$button.class}}" {{$button.other}} @click.prevent="allDisable('{{url "{$button['url']}"}}{{urldeper}}');">{{$button.text}}</button>
+                {{/if}}
+                {{/loop}}
+            </div>
+            {{/if}}
+        </div>
+
+        <div class="page_bar">
+            共<i class="tot-num template">{{totalNum}}</i>条数据
+            <div class="show_page"></div>
+        </div>
+    </div>
+</fieldset>
+{{/to}}
+
+{{to js}}
+<script type="text/javascript">
+    layui.use(['cml','layer','jquery'], function() {
+        layer=layui.layer;
+        cml = layui.cml;
+        $=layui.jquery;
+        cml.initPage('{{url $ajaxUrl}}{{urldeper}}', {{$layerWidthHeight}}, '{{$checkAll.name}}');
+
+        $('.data_form_box').on('mouseenter','img',function(){
+//                alert($(this).attr('src'));
+                var img = "<img class='img_msg' src='"+$(this).attr('src')+"' style='width:130px;' />";
+                img_show = layer.tips(img, this,{
+                    tips:[2, 'rgba(41,41,41,.5)']
+                    ,area: ['160px']
+//                    ,time:1
+                });
+            }
+        );
+
+        $('.data_form_box').on('mouseenter','.test',function(){
+                var a=$(this).html();
+                uid_show = layer.tips(a, this,{
+                    tips:[3]
+                    ,area: ['450px', 'auto']
+                });
+            }
+        );
+
+    });
+
+
+    {{$toPageJs}}
+
+
+</script>
+{{/to}}
+
+

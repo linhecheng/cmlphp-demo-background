@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit backupGlobals="false"
+        backupStaticAttributes="false"
+        bootstrap="tests/autoload.php"
+        colors="true"
+        convertErrorsToExceptions="true"
+        convertNoticesToExceptions="true"
+        convertWarningsToExceptions="true"
+        processIsolation="false"
+        stopOnSkipped="false"
+        stopOnFailure="false"
+        syntaxCheck="false">
+    <testsuites>
+        <testsuite name="CmlPHP Tests">
+            <directory phpVersion="5.5.0" >./tests/</directory>
+        </testsuite>
+    </testsuites>
+
+    <php>
+        <var name="cache_redis_host" value="192.168.19.215"/>
+        <var name="cache_redis_port" value="6379"/>
+        <var name="cache_memcache_host" value="192.168.19.215"/>
+        <var name="cache_memcache_port" value="11211"/>
+    </php>
+</phpunit>

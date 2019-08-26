@@ -1,0 +1,66 @@
+.main{margin: 15px;}
+.layui-upload-img {
+    width: 92px;
+    height: 92px;
+    margin:  0px 10px 10px 110px;
+}
+.hide{display: none;}
+
+h1{font-size:2em;}
+h2{font-size:1.5em;}
+h3{font-size:1.17em;}
+h4{font-size:1em;}
+h5{font-size:0.5em;}
+/* ͷ�� */
+.header{height: 65px; border-bottom: 1px solid #404553;  background-color: #393D49; color: #fff;}
+.logo{display:block;position: absolute; left: 10px; top: 10px;}
+.logo img{width: 150px; height: 35px;}
+
+.header .layui-nav{position: absolute; right: 0; top: 0; padding: 0; background: none;}
+.header .layui-nav .layui-nav-item{margin: 0 20px; line-height: 66px;}
+
+.body{display: block;}
+.layui-layout-admin .header-demo{border-bottom-color: #1AA094;}
+
+.header{
+    background: #393D49;
+    border-bottom: 5px solid #1AA094;
+}
+
+.topbar .layui-inline{
+    padding-right: 10px;
+}
+.long-date {
+    width: 200px;
+}
+.layui-small-textarea {
+    min-height: 50px;
+}
+.topbar .layui-small-inline{
+    width: 80px;
+    padding-right:0;!important;
+}
+.layui-elm-inline{
+    display: inline;
+    width: 5px;
+    padding: 2px;
+}
+.mini-topbar{
+    zoom:0.8;
+    padding-bottom: 5px;
+}
+.mini-topbar .layui-inline{
+    padding-right: 8px;
+}
+.mini-topbar .layui-input-inline{
+    padding-right: 8px;
+}
+.same-width{
+    width: 224px;
+}
+/*表格下拉*/
+
+.table-overlay .layui-table-view,
+.table-overlay .layui-table-box,
+.table-overlay .layui-table-cell{height: auto;overflow: visible;}
+

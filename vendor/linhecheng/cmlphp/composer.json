@@ -1,0 +1,31 @@
+{
+  "name": "linhecheng/cmlphp",
+  "description": "CmlPHP Framework",
+  "keywords": [
+    "cmlphp"
+  ],
+  "homepage": "http://cmlphp.com",
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "linhecheng",
+      "email": "linhechengbush@live.com",
+      "homepage": "http://cmlphp.com",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=5.4.0",
+    "ext-json": "*",
+    "ext-curl": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "6.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Cml\\": "src/Cml/",
+      "Cml\\Vendor\\": "src/Vendor/"
+    }
+  }
+}

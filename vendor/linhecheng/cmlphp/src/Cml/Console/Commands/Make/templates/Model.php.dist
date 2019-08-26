@@ -1,0 +1,8 @@
+<?php
+namespace $namespace\$dirName$component;
+
+use Cml\Model;
+
+class $className extends Model
+{
+}
