@@ -9,11 +9,13 @@
 
 namespace Cml\Exception;
 
+use RuntimeException;
+
 /**
  * 缓存连接失败异常类
  *
  * @package Cml\Exception
  */
-class CacheConnectFailException extends \RuntimeException
+class CacheConnectFailException extends RuntimeException
 {
 }

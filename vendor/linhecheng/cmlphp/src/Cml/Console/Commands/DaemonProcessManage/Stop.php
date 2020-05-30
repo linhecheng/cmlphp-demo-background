@@ -11,6 +11,7 @@ namespace Cml\Console\Commands\DaemonProcessManage;
 
 use Cml\Console\Command;
 use Cml\Tools\Daemon\ProcessManage;
+use InvalidArgumentException;
 
 /**
  * 终止后台进程
@@ -33,7 +34,7 @@ class Stop extends Command
      * @param array $args 传递给命令的参数
      * @param array $options 传递给命令的选项
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function execute(array $args, array $options = [])
     {

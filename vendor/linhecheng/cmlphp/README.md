@@ -10,7 +10,7 @@
 
 > CmlPHP v2.x 是一个免费的遵循apache协议的全能型php开源框架
 
-> CmlPHP v2.x 是基于php5.3+(v2.7+要求php5.4+)版本(已经测试过php7)开发的MVC/HMVC/MVSC/HMVSC框架,支持composer、分布式数据库、分布式缓存，支持文件、memcache、redis、apc等缓存，支持多种url模式、URL路由[RESTful]，支持多项目集成、第三方扩展、支持插件。
+> CmlPHP v2.x 是基于~~php5.3+(v2.7开始要求php5.4+)版本~~v2.9.0开始需要php7.0+开发的MVC/HMVC/MVSC/HMVSC框架,支持composer、分布式数据库、分布式缓存，支持文件、memcache、redis、apc等缓存，支持中间件，支持多种url模式、URL路由[RESTful]，支持多项目集成、第三方扩展、支持插件。
 
 > CmlPHP v2.x 在底层数据库查询模块做了缓存集成，开发者无需关注数据缓存的问题，按照相应的API调用即可获得最大性能。从而从根本上避免了新手未使用缓存，或缓存使用不当造成的性能不佳的问题。也杜绝了多人协同开发缓存同步及管理的问题
 
@@ -36,6 +36,9 @@
 
 > CmlPHP v2.x 提供了命令运行支持
 
+## v2.9.x
+> orm支持实体关联模型、支持`Psr-15`请求处理器、中间件、`Psr-7` HTTP 消息接口、 `PSR-17` HTTP 工厂
+>
 ## v2.7.x
 > 服务化。各个组件使用容器来管理、注入依赖。封装了FastRoute、blade、whoops的服务可在入口中注入替换内置的相关组件(默认还是使用框架内置的)
 

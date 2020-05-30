@@ -21,7 +21,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function emergency($message, array $context = []);
 
@@ -33,7 +33,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function alert($message, array $context = []);
 
@@ -45,7 +45,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function critical($message, array $context = []);
 
@@ -55,7 +55,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function error($message, array $context = []);
 
@@ -67,7 +67,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function warning($message, array $context = []);
 
@@ -77,7 +77,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function notice($message, array $context = []);
 
@@ -89,7 +89,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function info($message, array $context = []);
 
@@ -99,7 +99,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function debug($message, array $context = []);
 
@@ -110,7 +110,7 @@ interface Logger
      * @param string $message 要记录到log的信息
      * @param array $context 上下文信息
      *
-     * @return null
+     * @return bool
      */
     public function log($level, $message, array $context = []);
 }

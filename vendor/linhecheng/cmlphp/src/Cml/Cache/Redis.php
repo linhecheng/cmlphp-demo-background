@@ -11,11 +11,13 @@ namespace Cml\Cache;
 
 use Cml\Config;
 use Cml\Exception\CacheConnectFailException;
-use Cml\Exception\PhpExtendNotInstall;
+use Cml\Exception\PhpExtendNotInstallException;
 use Cml\Lang;
 use Cml\Lock;
 use Cml\Log;
 use Cml\Plugin;
+use Exception;
+use RuntimeException;
 
 /**
  * Redis缓存驱动
@@ -32,14 +34,14 @@ class Redis extends namespace\Base
     /**
      * 使用的缓存配置 默认为使用default_cache配置的参数
      *
-     * @param bool ｜array $conf
+     * @param array $conf
      */
-    public function __construct($conf = false)
+    public function __construct($conf)
     {
         $this->conf = $conf ? $conf : Config::get('default_cache');
 
         if (!extension_loaded('redis')) {
-            throw new PhpExtendNotInstall(Lang::get('_CACHE_EXTEND_NOT_INSTALL_', 'Redis'));
+            throw new PhpExtendNotInstallException(Lang::get('_CACHE_EXTEND_NOT_INSTALL_', 'Redis'));
         }
     }
 
@@ -67,7 +69,7 @@ class Redis extends namespace\Base
                     } else {
                         return $instance->connect($host, $port, 1.5);
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     return false;
                 }
             };
@@ -111,7 +113,7 @@ class Redis extends namespace\Base
                 }
 
                 if ($password && !$this->redis[$success]->auth($password)) {
-                    throw new \RuntimeException('redis password error!');
+                    throw new RuntimeException('redis password error!');
                 }
 
                 isset($this->conf['server'][$success]['db']) && $this->redis[$success]->select($this->conf['server'][$success]['db']);
@@ -121,7 +123,7 @@ class Redis extends namespace\Base
                 }
 
                 if ($password && !$this->redis[$success]->auth($password)) {
-                    throw new \RuntimeException('redis password error!');
+                    throw new RuntimeException('redis password error!');
                 }
 
                 isset($failOver['db']) && $this->redis[$success]->select($failOver['db']);
@@ -207,12 +209,15 @@ class Redis extends namespace\Base
             if (!isset($this->redis[$key]) || !is_object($this->redis[$key])) {
                 $instance = new \Redis();
                 if ($instance->pconnect($val['host'], $val['port'], 1.5)) {
+                    $val['password'] && $instance->auth($val['password']);
                     $this->redis[$key] = $instance;
                 } else {
-                    throw new \RuntimeException(Lang::get('_CACHE_NEW_INSTANCE_ERROR_', 'Redis'));
+                    throw new RuntimeException(Lang::get('_CACHE_NEW_INSTANCE_ERROR_', 'Redis'));
                 }
             }
             $this->redis[$key]->flushDB();
+            $this->redis[$key]->close();
+            unset($this->redis[$key]);
         }
         return true;
     }

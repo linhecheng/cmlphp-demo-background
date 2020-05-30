@@ -13,7 +13,7 @@ use Cml\Console\Command;
 use Cml\Route;
 
 /**
- * 创建静态文件资源目录软链接
+ * 在命令行下执行控制器方法
  *
  * @package Cml\Console\Commands
  */

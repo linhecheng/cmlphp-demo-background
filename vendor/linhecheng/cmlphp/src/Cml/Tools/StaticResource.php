@@ -7,6 +7,7 @@
  * @version  @see \Cml\Cml::VERSION
  * cmlphp框架 静态资源管理
  * *********************************************************** */
+
 use Cml\Cml;
 use Cml\Config;
 use Cml\Console\Format\Colour;
@@ -14,6 +15,7 @@ use Cml\Console\IO\Output;
 use Cml\Http\Request;
 use Cml\Http\Response;
 use Cml\Route;
+use DirectoryIterator;
 
 /**
  * 静态资源管理类
@@ -67,7 +69,7 @@ class StaticResource
          );*/
 
         $dirIteratorFunc = function ($dir, $parentDirName = '') use ($rootDir, $createDirFunc, &$dirIteratorFunc) {
-            $dirIterator = new \DirectoryIterator($dir);
+            $dirIterator = new DirectoryIterator($dir);
 
             foreach ($dirIterator as $file) {
                 if (!$file->isDot() && $file->isDir()) {
@@ -140,7 +142,10 @@ class StaticResource
     {
         if (Cml::$debug) {
             $file = '';
-            $pathInfo = Route::getPathInfo();
+            $pathInfo = array_map(function ($item) {
+                return trim($item, '.');
+            }, Route::getPathInfo());
+
             array_shift($pathInfo);
 
             if (isset($pathInfo[0]) && $pathInfo[0] == 'cmlphpstatic') {

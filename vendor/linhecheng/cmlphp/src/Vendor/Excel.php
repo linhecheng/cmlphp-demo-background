@@ -51,6 +51,18 @@ class Excel
     }
 
     /**
+     * 获取文件名
+     *
+     * @param bool $withFix 是否带文件后缀
+     *
+     * @return mixed
+     */
+    public function getFileName($withFix = true)
+    {
+        return $this->filename . ($withFix ? ".xls" : '');
+    }
+
+    /**
      * 添加标题行
      *
      * @param array $titleArr
@@ -79,16 +91,15 @@ class Excel
     }
 
     /**
-     * 生成Excel文件
+     * 获取输出的内容
      *
-     * @param array $data
+     * @param $data
      *
-     * @return void
+     * @return string
      */
-    public function excelXls($data)
+    public function fetch($data)
     {
-        header("Content-Type: application/vnd.ms-excel; charset=" . $this->coding);
-        header('Content-Disposition: attachment; filename="' . rawurlencode($this->filename . ".xls") . '"');
+        ob_start();
         echo sprintf($this->header, $this->coding, $this->tWorksheetTitle);
         echo '<body link=blue vlink=purple ><table width="100%" border="0" cellspacing="0" cellpadding="0">';
 
@@ -101,6 +112,21 @@ class Excel
             echo "<tr>\n" . $rows . "</tr>\n";
         }
         echo "</tbody></table></body></html>";
-        exit();
+        return ob_get_clean();
+    }
+
+    /**
+     * 生成Excel文件
+     *
+     * @param array $data
+     *
+     * @return void
+     */
+    public function excelXls($data)
+    {
+        header("Content-Type: application/vnd.ms-excel; charset=" . $this->coding);
+        header('Content-Disposition: attachment; filename="' . rawurlencode($this->getFileName(true)) . '"');
+
+        exit($this->fetch($data));
     }
 }

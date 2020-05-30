@@ -9,9 +9,13 @@
 
 namespace Cml;
 
-use Cml\Exception\ControllerNotFoundException;
+use Cml\Http\Message\MiddlewareControllerTrait;
+use Cml\Http\Message\Psr\ServerRequestCreator;
+use Cml\Http\Message\RequestHandler;
+use Cml\Http\Message\ResponseEmitter;
 use Cml\Http\Request;
-use Cml\Http\Response;
+use Cml\Interfaces\Middleware;
+use Cml\Middleware\ExecuteControllerMiddleware;
 
 /**
  * 框架基础类,负责初始化应用的一系列工作,如配置初始化、语言包载入、错误异常机制的处理等
@@ -23,7 +27,7 @@ class Cml
     /**
      * 版本
      */
-    const VERSION = 'v2.8.7';
+    const VERSION = 'v2.9.0';
 
     /**
      * 执行app/只是初始化环境
@@ -187,6 +191,8 @@ class Cml
             }
 
             Cml::getContainer()->make('cml_error_or_exception')->appException($e);
+
+            Plugin::hook('cml.after_throw_exception', $e);
         }); //手动抛出的异常由此函数捕获
 
         ini_set('display_errors', 'off');//屏蔽系统自带的错误输出
@@ -241,9 +247,10 @@ class Cml
                 //程序运行必须的类
                 $runTimeClassList = [
                     CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Controller.php',
-                    CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Http' . DIRECTORY_SEPARATOR . 'Response.php',
                     CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Route.php',
-                    CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Secure.php',
+                    CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Interfaces' . DIRECTORY_SEPARATOR . 'Route.php',
+                    CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Interfaces' . DIRECTORY_SEPARATOR . 'Middleware.php',
+                    CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Middleware' . DIRECTORY_SEPARATOR . 'ExecuteControllerMiddleware.php',
                 ];
                 Config::get('session_user') && $runTimeClassList[] = CML_CORE_PATH . DIRECTORY_SEPARATOR . 'Session.php';
 
@@ -274,17 +281,15 @@ class Cml
                 }
             }
         } else {
-            header('X-Powered-By:CmlPHP');
+            //header('X-Powered-By:CmlPHP');
             // 页面压缩输出支持
-            if (Config::get('output_encode')) {
-                $zlib = ini_get('zlib.output_compression');
-                if (empty($zlib)) {
-                    ///@ob_end_clean () ; //防止在启动ob_start()之前程序已经有输出(比如配置文件尾多敲了换行)会导致服务器303错误
-                    ob_start('ob_gzhandler') || ob_start();
-                    define('CML_OB_START', true);
-                } else {
-                    define('CML_OB_START', false);
-                }
+            $zlib = ini_get('zlib.output_compression');
+            if (empty($zlib)) {
+                php_sapi_name() === 'cli-server' && @ob_end_clean(); //防止在启动ob_start()之前程序已经有输出(比如配置文件尾多敲了换行)会导致服务器303错误
+                ob_start(Config::get('output_encode') ? 'ob_gzhandler' : null);
+                define('CML_OB_START', true);
+            } else {
+                define('CML_OB_START', false);
             }
         }
 
@@ -353,24 +358,83 @@ class Cml
 
         self::onlyInitEnvironmentNotRunController($initDi);
 
-        Plugin::hook('cml.before_run_controller');
+        self::cmlStop(self::requestHandler());
+    }
 
+    /**
+     * 处理请求
+     *
+     */
+    private static function requestHandler()
+    {
         $controllerAction = Cml::getContainer()->make('cml_route')->getControllerAndAction();
 
-        if ($controllerAction) {
-            Cml::$debug && Debug::addTipInfo(Lang::get('_CML_EXECUTION_ROUTE_IS_', "{$controllerAction['route']}{ {$controllerAction['class']}::{$controllerAction['action']} }", Config::get('url_model')));
-            $controller = new $controllerAction['class']();
-            call_user_func([$controller, "runAppController"], $controllerAction['action']);//运行
+        if (isset(class_uses($controllerAction['class'])[MiddlewareControllerTrait::class])) {
+            $factory = self::getContainer()->make('psr17_http_factory');
+            $creator = new ServerRequestCreator($factory, $factory, $factory, $factory);
+
+            /**
+             * @var RequestHandler $dispatcher
+             */
+            $dispatcher = self::getContainer()->make('psr15_request_handler', [self::getMiddleware()]);
+            $dispatcher->add(new ExecuteControllerMiddleware());
+
+            $response = $dispatcher->handle($creator->fromGlobals());
+            $responseEmitter = new ResponseEmitter();
+            $responseEmitter->emit($response);
+            return $response->getHeaderLine('content-type');
         } else {
-            self::montFor404Page();
-            if (self::$debug) {
-                throw new ControllerNotFoundException(Lang::get('_CONTROLLER_NOT_FOUND_'));
-            } else {
-                Response::show404Page();
-            }
+            (new ExecuteControllerMiddleware())->process();
+            return null;
         }
-        //输出Debug模式的信息
-        self::cmlStop();
+    }
+
+    /**
+     * 获取中间件列表
+     * 执行顺序 => 全局中间件 -> 应用级别中间件 -> 类级别中间件 -> 方法级别中间件
+     *
+     * @return Middleware[]
+     */
+    private static function getMiddleware()
+    {
+        $middles = Cml::getApplicationDir('global_config_path') . DIRECTORY_SEPARATOR . 'middleware.php';
+        if (is_file($middles)) {
+            $middles = Cml::requireFile($middles);
+            $needUse = $middles['global'] ?? [];
+            $app = Cml::getContainer()->make('cml_route')->getAppName();
+            foreach (($middles['app'] ?? []) as $patten => $mid) {
+                if (preg_match('#' . str_replace('*', '(.*?)', $patten) . '#im', "{$app}/", $matches)) {
+                    array_push($needUse, $mid);
+                }
+            }
+            //加载模块的中间件
+            $moduleMiddles = Cml::getApplicationDir('apps_path')
+                . '/' . $app . '/'
+                . Cml::getApplicationDir('app_config_path_name') . '/' . 'middleware.php';
+
+            if (is_file($moduleMiddles)) {
+                $moduleMiddles = Cml::requireFile($moduleMiddles);
+                $middles['app'][$app] = array_merge((array)($middles['app'][$app] ?? []), (array)($moduleMiddles['app'] ?? []));
+                $middles['controller'] = array_merge((array)($middles['controller'] ?? []), (array)($moduleMiddles['controller'] ?? []));
+                $middles['action'] = array_merge((array)($middles['action'] ?? []), (array)($moduleMiddles['action'] ?? []));
+            }
+
+            $controllerActionMap = Cml::getContainer()->make('cml_route')->getControllerAndAction();
+            $controller = $controllerActionMap['class'];
+            $action = $controller . '@' . $controllerActionMap['action'];
+
+            isset($middles['app'][$app]) && $needUse = array_merge($needUse, (array)$middles['app'][$app]);
+            isset($middles['controller'][$controller]) && $needUse = array_merge($needUse, (array)$middles['controller'][$controller]);
+            isset($middles['action'][$action]) && $needUse = array_merge($needUse, (array)$middles['action'][$action]);
+            //获取路由中配置的中间件
+            $routeMiddle = Cml::getContainer()->make('cml_route')->getMiddleware();
+            $routeMiddle && $needUse = array_merge($needUse, $routeMiddle);
+
+            return array_map(function ($middleware) {
+                return new $middleware();
+            }, $needUse);
+        }
+        return [];
     }
 
     /**
@@ -398,21 +462,26 @@ class Cml
     /**
      * 程序中并输出调试信息
      *
+     * @param string $contentType 响应类型
      */
-    public static function cmlStop()
+    public static function cmlStop($contentType = null)
     {
-        //输出Debug模式的信息
-        if (self::$debug) {
-            header('Content-Type:text/html; charset=' . Config::get('default_charset'));
-            Debug::stop();
-        } else {
-            $deBugLogData = dump('', 1);
-            if (!empty($deBugLogData)) {
-                Config::get('dump_use_php_console') ? dumpUsePHPConsole($deBugLogData) : Cml::requireFile(CML_CORE_PATH . DIRECTORY_SEPARATOR . 'ConsoleLog.php', ['deBugLogData' => $deBugLogData]);
-            };
-            Plugin::hook('cml.before_ob_end_flush');
-            CML_OB_START && ob_end_flush();
+        if (!$contentType || false !== stripos($contentType, 'text/html') || false !== stripos($contentType, 'text/plain')) {
+
+            //输出Debug模式的信息
+            if (self::$debug) {
+                header('Content-Type:text/html; charset=' . Config::get('default_charset'));
+                Debug::stop();
+            } else {
+                $deBugLogData = dump('', 1);
+                if (!empty($deBugLogData)) {
+                    Config::get('dump_use_php_console') ? dumpUsePHPConsole($deBugLogData) : Cml::requireFile(CML_CORE_PATH . DIRECTORY_SEPARATOR . 'ConsoleLog.php', ['deBugLogData' => $deBugLogData]);
+                }
+            }
         }
+
+        Plugin::hook('cml.before_ob_end_flush');
+        CML_OB_START && ob_end_flush();
         exit();
     }
 
@@ -471,9 +540,11 @@ class Cml
     {
         $configSubFix = Config::get('html_template_suffix');
         Config::set('html_template_suffix', '');
-        echo View::getEngine('html')
-            ->setHtmlEngineOptions('templateDir', dirname($tpl) . DIRECTORY_SEPARATOR)
+        $engine = View::getEngine('html');
+        $html = $engine->setHtmlEngineOptions('templateDir', dirname($tpl) . DIRECTORY_SEPARATOR)
             ->fetch(basename($tpl), false, true, true);
+        $engine->sendHeader();
+        echo $html;
         Config::set('html_template_suffix', $configSubFix);
     }
 

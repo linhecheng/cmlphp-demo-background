@@ -84,7 +84,7 @@ class Encry
     /**
      * 加密方法
      *
-     * @param string $data 加密字符串
+     * @param mixed $data 加密字符串
      * @param string $key 密钥
      *
      * @return mixed
@@ -98,7 +98,7 @@ class Encry
     /**
      * 解密方法
      *
-     * @param string $data 解密字符串
+     * @param mixed $data 解密字符串
      * @param string $key 密钥
      *
      * @return mixed

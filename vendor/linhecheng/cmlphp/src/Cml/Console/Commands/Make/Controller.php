@@ -14,6 +14,8 @@ use Cml\Config;
 use Cml\Console\Command;
 use Cml\Console\Format\Colour;
 use Cml\Console\IO\Output;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * 创建控制器
@@ -63,7 +65,7 @@ EOF;
         $name = $args[0];
         $name = explode('-', $name);
         if (count($name) < 1) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'The arg name "%s" is invalid. eg: adminbase-Blog/Category',
                 $name
             ));
@@ -85,7 +87,7 @@ EOF;
         }
 
         if (!is_dir($path) && false == mkdir($path, 0700, true)) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'The path "%s" could not be create',
                 $path
             ));
@@ -95,14 +97,14 @@ EOF;
 
         $file = $path . $className . '.php';
         if (is_file($file)) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'The file "%s" is exist',
                 $file
             ));
         }
 
         if (false === file_put_contents($file, $contents)) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'The file "%s" could not be written to',
                 $path
             ));

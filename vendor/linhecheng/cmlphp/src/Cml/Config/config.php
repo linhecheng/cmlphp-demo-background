@@ -16,7 +16,7 @@ return [
 
     //数据库配置
     'default_db' => [
-        'driver' => 'MySql.Pdo', //数据库驱动
+        'driver' => 'MySql', //数据库驱动--使用入口中绑定的db_mysql驱动
         'master' => [
             'host' => 'localhost', //数据库主机
             //'host' => 'unix_socket=/path/', //使用unix_socket
@@ -44,7 +44,7 @@ return [
     /**
     使用MongoDB
     'db_mongo' => [
-        'driver' => 'MongoDB.MongoDB', //数据库驱动
+        'driver' => 'MongoDB', //数据库驱动--使用入口中绑定的db_mongodb驱动
         'master' => [
             'host' => 'localhost:27017',
             'username' => '',
@@ -59,7 +59,7 @@ return [
     // 缓存服务器的配置
     'default_cache' => [
         'on' => 0, //为1则启用，或者不启用
-        'driver' => 'Memcache',
+        'driver' => 'Memcache', //使用入口中绑定的cache_memcache驱动
         'prefix' => 'cml_',
         'server' => [
             [
@@ -75,20 +75,17 @@ return [
     /**
     //文件缓存
     'default_cache' => [
-        'on' => 0, //为1则启用，或者不启用
-        'driver' => 'File',
+        'driver' => 'File', //使用入口中绑定的cache_file驱动
         'prefix' => 'cml_'
     ],
     //apc缓存
     'default_cache' => [
-        'on' => 0, //为1则启用，或者不启用
-        'driver' => 'Apc',
+        'driver' => 'Apc',  //使用入口中绑定的cache_apc驱动
         'prefix' => 'cml_'
     ],
     //Redis缓存
     'default_cache' => [
-        'on' => 0, //为1则启用，或者不启用
-        'driver' => 'Redis',
+        'driver' => 'Redis', //使用入口中绑定的cache_redis驱动
         'prefix' => 'cml_',
         'server' => [
             [
@@ -105,6 +102,16 @@ return [
         //    'port' => 6379
         //]
     ],
+     //Redis集群
+     'default_cache' => [
+        'driver' => 'RedisCluster',  //使用入口中绑定的cache_rediscluster驱动
+        'prefix' => 'bx_',//配置缓存前缀防止冲突
+        'server' => [
+           'host1:port1',
+           'host2:port2',
+        ],
+        'password' => 'pwd'
+     ],
     */
 
     /*模板设置*/

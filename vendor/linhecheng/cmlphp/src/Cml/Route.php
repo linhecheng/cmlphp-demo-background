@@ -6,9 +6,11 @@
  * @version  @see \Cml\Cml::VERSION
  * cmlphp框架 URL解析类
  * *********************************************************** */
+
 namespace Cml;
 
 use Cml\Http\Request;
+use InvalidArgumentException;
 
 /**
  * Url解析类,负责路由及Url的解析
@@ -90,12 +92,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function get($pattern, $action)
+    public static function get($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->get($pattern, $action);
+        Cml::getContainer()->make('cml_route')->get($pattern, $action, $middleware);
     }
 
     /**
@@ -103,12 +106,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function post($pattern, $action)
+    public static function post($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->post($pattern, $action);
+        Cml::getContainer()->make('cml_route')->post($pattern, $action, $middleware);
     }
 
     /**
@@ -116,12 +120,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function put($pattern, $action)
+    public static function put($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->put($pattern, $action);
+        Cml::getContainer()->make('cml_route')->put($pattern, $action, $middleware);
     }
 
     /**
@@ -129,12 +134,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function patch($pattern, $action)
+    public static function patch($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->patch($pattern, $action);
+        Cml::getContainer()->make('cml_route')->patch($pattern, $action, $middleware);
     }
 
     /**
@@ -142,12 +148,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function delete($pattern, $action)
+    public static function delete($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->delete($pattern, $action);
+        Cml::getContainer()->make('cml_route')->delete($pattern, $action, $middleware);
     }
 
     /**
@@ -155,12 +162,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function options($pattern, $action)
+    public static function options($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->options($pattern, $action);
+        Cml::getContainer()->make('cml_route')->options($pattern, $action, $middleware);
     }
 
     /**
@@ -168,12 +176,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function any($pattern, $action)
+    public static function any($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->any($pattern, $action);
+        Cml::getContainer()->make('cml_route')->any($pattern, $action, $middleware);
     }
 
     /**
@@ -181,12 +190,13 @@ class Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return void
      */
-    public static function rest($pattern, $action)
+    public static function rest($pattern, $action, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->rest($pattern, $action);
+        Cml::getContainer()->make('cml_route')->rest($pattern, $action, $middleware);
     }
 
     /**
@@ -194,10 +204,11 @@ class Route
      *
      * @param string $namespace 分组名
      * @param callable $func 闭包
+     * @param array $middleware 使用的中间件
      */
-    public static function group($namespace, callable $func)
+    public static function group($namespace, callable $func, $middleware = [])
     {
-        Cml::getContainer()->make('cml_route')->group($namespace, $func);
+        Cml::getContainer()->make('cml_route')->group($namespace, $func, $middleware);
     }
 
     /**
@@ -252,7 +263,7 @@ class Route
      * 载入应用单独的路由
      *
      * @param string $app 应用名称
-     * @param string $inConfigDir 配置文件是否在Config目录中
+     * @param mixed $inConfigDir 配置文件是否在Config目录中
      */
     public static function loadAppRoute($app = 'web', $inConfigDir = true)
     {
@@ -263,7 +274,7 @@ class Route
         $path = $app . DIRECTORY_SEPARATOR . ($inConfigDir ? Cml::getApplicationDir('app_config_path_name') . DIRECTORY_SEPARATOR : '') . 'route.php';
         $appRoute = Cml::getApplicationDir('apps_path') . DIRECTORY_SEPARATOR . $path;
         if (!is_file($appRoute)) {
-            throw new \InvalidArgumentException(Lang::get('_NOT_FOUND_', $path));
+            throw new InvalidArgumentException(Lang::get('_NOT_FOUND_', $path));
         }
 
         $loaded[$app] = 1;
@@ -271,6 +282,7 @@ class Route
     }
 
     /**
+     * 执行闭包路由
      * 执行闭包路由
      *
      * @param callable $call 闭包

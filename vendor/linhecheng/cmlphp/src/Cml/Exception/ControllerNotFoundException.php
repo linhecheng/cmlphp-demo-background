@@ -9,11 +9,13 @@
 
 namespace Cml\Exception;
 
+use BadMethodCallException;
+
 /**
  * 控制器未找到异常类
  *
  * @package Cml\Exception
  */
-class ControllerNotFoundException extends \RuntimeException
+class ControllerNotFoundException extends BadMethodCallException
 {
 }

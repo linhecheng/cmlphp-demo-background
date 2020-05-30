@@ -9,6 +9,10 @@
 
 namespace Cml\Interfaces;
 
+use Cml\Entity\Collection;
+use Generator;
+use InvalidArgumentException;
+
 /**
  * Orm 数据库抽象接口
  *
@@ -62,12 +66,14 @@ interface Db
     /**
      * 根据key取出数据
      *
+     * @deprecated
+     *
      * @param string $key get('user-uid-123');
      * @param bool $and 多个条件之间是否为and  true为and false为or
      * @param bool|string $useMaster 是否使用主库 默认读取从库 此选项为字符串时为表前缀$tablePrefix
      * @param null|string $tablePrefix 表前缀
      *
-     * @return array
+     * @return array|Collection
      */
     public function get($key, $and = true, $useMaster = false, $tablePrefix = null);
 
@@ -80,7 +86,7 @@ interface Db
      *
      * @return bool|int
      */
-    public function set($table, $data, $tablePrefix = null);
+    public function insert($table, $data, $tablePrefix = null);
 
     /**
      * 新增多条数据
@@ -90,11 +96,11 @@ interface Db
      * @param array $data eg: 多条数据的值 [['标题1', '内容1', 1, '2017'], ['标题2', '内容2', 1, '2017']]
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
      * @param bool $openTransAction 是否开启事务 默认开启
-     * @throws \InvalidArgumentException
-     *
      * @return bool|array
+     * @throws InvalidArgumentException
+     *
      */
-    public function setMulti($table, $field, $data, $tablePrefix = null, $openTransAction = true);
+    public function insertMulti($table, $field, $data, $tablePrefix = null, $openTransAction = true);
 
     /**
      * 插入或替换一条记录
@@ -115,20 +121,21 @@ interface Db
      * @param array $data 插入的值 eg: ['username'=>'admin', 'email'=>'linhechengbush@live.com']
      * @param array $up 更新的值-会自动merge $data中的数据
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
+     * @param array $upIgnoreField 更新的时候要忽略的的字段
      *
      * @return int
      */
-    public function upSet($table, array $data, array $up = [], $tablePrefix = null);
+    public function upSet($table, array $data, array $up = [], $tablePrefix = null, $upIgnoreField = []);
 
     /**
-     * 根据key更新一条数据
+     * 更新数据
      *
      * @param string|array $key eg: 'user'(表名)、'user-uid-$uid'(表名+条件) 、['xx'=>'xx' ...](即:$data数组如果条件是通用whereXX()、表名是通过table()设定。这边可以直接传$data的数组)
      * @param array | null $data eg: ['username'=>'admin', 'email'=>'linhechengbush@live.com'] 可以直接通过$key参数传递
      * @param bool $and 多个条件之间是否为and  true为and false为or
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
      *
-     * @return boolean
+     * @return int
      */
     public function update($key, $data = null, $and = true, $tablePrefix = null);
 
@@ -139,7 +146,7 @@ interface Db
      * @param bool $and 多个条件之间是否为and  true为and false为or
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
      *
-     * @return boolean
+     * @return int
      */
     public function delete($key = '', $and = true, $tablePrefix = null);
 
@@ -169,10 +176,23 @@ interface Db
      * @param int $offset 偏移量
      * @param int $limit 返回的条数
      * @param bool $useMaster 是否使用主库 默认读取从库
+     * @param mixed $fieldAsKey 返回以某个字段做为key的数组
      *
-     * @return array
+     * @return array|Collection
      */
-    public function select($offset = null, $limit = null, $useMaster = false);
+    public function select($offset = null, $limit = null, $useMaster = false, $fieldAsKey = false);
+
+
+    /**
+     * 返回一个迭代器
+     *
+     * @param int $offset 偏移量
+     * @param int $limit 返回的条数
+     * @param bool $useMaster 是否使用主库 默认读取从库
+     *
+     * @return Generator
+     */
+    public function cursor($offset = null, $limit = null, $useMaster = false);
 
     /**
      * 分页获取数据
@@ -180,10 +200,11 @@ interface Db
      * @param int $limit 每页返回的条数
      * @param bool $useMaster 是否使用主库 默认读取从库
      * @param null|int $page 当前页数-不传则获取配置中var_page配置的request值
+     * @param mixed $fieldAsKey 返回以某个字段做为key的数组
      *
      * @return array
      */
-    public function paginate($limit, $useMaster = false, $page = null);
+    public function paginate($limit, $useMaster = false, $page = null, $fieldAsKey = false);
 
     /**
      * 获取表主键
@@ -224,7 +245,7 @@ interface Db
      *
      * @return array
      */
-    public function plunk($column, $key = null, $limit = null, $useMaster = false);
+    public function pluck($column, $key = null, $limit = null, $useMaster = false);
 
     /**
      * 组块结果集-此方法前调用paramsAutoReset无效
@@ -247,8 +268,8 @@ interface Db
     /**
      * where条件组装 两个列相等
      *
-     * @param string $column eg：username | `user`.`username`
-     * @param string $column2 eg: nickname | `user`.`nickname`
+     * @param string $column eg：username | user.username
+     * @param string $column2 eg: nickname | user.nickname
      *
      * @return $this
      */
@@ -568,6 +589,24 @@ interface Db
     public function count($field = '*', $isMulti = false, $useMaster = false);
 
     /**
+     * 数据是否存在
+     *
+     * @param bool|string $useMaster 是否使用主库 默认读取从库
+     *
+     * @return mixed
+     */
+    public function exists($useMaster = false);
+
+    /**
+     * 数据是否不存在
+     *
+     * @param bool|string $useMaster 是否使用主库 默认读取从库
+     *
+     * @return mixed
+     */
+    public function doesntExist($useMaster = false);
+
+    /**
      * 获取 MAX(字段名或*) 的结果
      *
      * @param string $field 要统计的字段名
@@ -610,6 +649,17 @@ interface Db
      * @return mixed
      */
     public function avg($field = '*', $isMulti = false, $useMaster = false);
+
+    /**
+     * 强制使用索引
+     *
+     * @param string $table 要强制索引的表名(不带前缀)
+     * @param string $index 要强制使用的索引
+     * @param string $tablePrefix 表前缀 不传则获取配置中配置的前缀
+     *
+     * @return $this
+     */
+    public function forceIndex($table, $index, $tablePrefix = null);
 
     /**
      * 返回INSERT，UPDATE 或 DELETE 查询所影响的记录行数。

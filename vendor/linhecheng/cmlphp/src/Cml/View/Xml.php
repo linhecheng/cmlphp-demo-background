@@ -6,6 +6,7 @@
  * @version  @see \Cml\Cml::VERSION
  * cmlphp框架 视图 Xml渲染引擎
  * *********************************************************** */
+
 namespace Cml\View;
 
 use Cml\Config;
@@ -24,8 +25,20 @@ class Xml extends Base
      */
     public function display()
     {
-        header('Content-Type: application/xml;charset=' . Config::get('default_charset'));
-        exit($this->array2xml($this->args));
+        $xml = $this->fetch();
+        $this->sendHeader();
+        exit($xml);
+    }
+
+    /**
+     * 获取内容
+     *
+     * @return string
+     */
+    public function fetch()
+    {
+        $this->setHeader('Content-Type', 'application/xml;charset=' . Config::get('default_charset'));
+        return $this->array2xml($this->args);
     }
 
     /**
@@ -45,7 +58,7 @@ class Xml extends Base
                 $key = 'item';
             }
             if (!is_array($val)) {
-                if (is_string($val) && preg_match('/[&<>"\'\?]+/', $val)) {
+                if (is_string($val) && preg_match('/[&<>"\'?]+/', $val)) {
                     $str .= $space . "<$key><![CDATA[" . $val . ']]>' . "</$key>\r\n";
                 } else {
                     $str .= $space . "<$key>" . $val . "</$key>\r\n";

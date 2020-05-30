@@ -12,6 +12,7 @@ namespace Cml;
 use Cml\Http\Input;
 use Cml\Http\Request;
 use Cml\Http\Response;
+use UnexpectedValueException;
 
 /**
  * 安全处理类,封装了常用的安全过滤接口
@@ -24,7 +25,7 @@ class Secure
     /**
      * 增强的addslashes
      *
-     * @param  mixed $var 要过滤的变量字符串或数组
+     * @param mixed $var 要过滤的变量字符串或数组
      *
      * @return mixed 处理后的变量
      */
@@ -43,7 +44,7 @@ class Secure
     /**
      * 增强的stripslashes
      *
-     * @param  mixed $var 要过滤的变量字符串或数组
+     * @param mixed $var 要过滤的变量字符串或数组
      *
      * @return mixed 处理后的变量
      */
@@ -119,15 +120,15 @@ class Secure
     /**
      * 过滤javascript,css,iframes,object等标签
      *
-     * @param  string $value 需要过滤的值
-     * @param  bool $clear 转义还是删除
+     * @param string $value 需要过滤的值
+     * @param bool $clear 转义还是删除
      *
      * @return mixed
      */
     public static function filterScript($value, $clear = false)
     {
         $value = preg_replace("/javascript:/i", $clear ? '' : "&111", $value);
-        $value = preg_replace("/(javascript:)?on(click|load|key|mouse|error|abort|move|unload|change|dblclick|move|reset|resize|submit)/i", $clear ? '' : "&111n\\2", $value);
+        $value = preg_replace("/(javascript:)?on(click|load|key|mouse|error|abort|unload|change|dblclick|move|reset|resize|submit)/i", $clear ? '' : "&111n\\2", $value);
         $value = preg_replace("/<script(.*?)>(.*?)<\/script>/si", $clear ? '' : "&ltscript\\1&gt\\2&lt/script&gt", $value);
         $value = preg_replace("/<iframe(.*?)>(.*?)<\/iframe>/si", $clear ? '' : "&ltiframe\\1&gt\\2&lt/iframe&gt", $value);
         $value = preg_replace("/<object.+<\/object>/isU", '', $value);
@@ -137,7 +138,7 @@ class Secure
     /**
      * 过滤特殊字符
      *
-     * @param  string $value 需要过滤的值
+     * @param string $value 需要过滤的值
      *
      * @return mixed
      */
@@ -197,11 +198,11 @@ class Secure
             if ($type == 1) {
                 if (!empty($_POST)) {
                     Response::sendHttpStatus(403);
-                    throw new \UnexpectedValueException(Lang::get('_ILLEGAL_REQUEST_'));
+                    throw new UnexpectedValueException(Lang::get('_ILLEGAL_REQUEST_'));
                 }
             } else {
                 Response::sendHttpStatus(403);
-                throw new \UnexpectedValueException(Lang::get('_ILLEGAL_REQUEST_'));
+                throw new UnexpectedValueException(Lang::get('_ILLEGAL_REQUEST_'));
             }
         }
     }

@@ -77,28 +77,28 @@ class File extends Base
      */
     public function __destruct()
     {
-        foreach ($this->lockCache as $key => $fp) {
+        foreach ($this->lockCache as $lock => $fp) {
             flock($fp, LOCK_UN);//5.3.2 在文件资源句柄关闭时不再自动解锁。现在要解锁必须手动进行。
             fclose($fp);
-            is_file($key) && unlink($key);
-            $this->lockCache[$key] = null;//防止gc延迟,判断有误
-            unset($this->lockCache[$key]);
+            is_file($lock) && unlink($lock);
+            $this->lockCache[$lock] = null;//防止gc延迟,判断有误
+            unset($this->lockCache[$lock]);
         }
     }
 
     /**
      * 获取缓存文件名
      *
-     * @param  string $key 缓存名
+     * @param  string $lock 缓存名
      *
      * @return string
      */
-    protected function getKey($key)
+    protected function getKey($lock)
     {
-        $key = parent::getKey($key);
-        $md5Key = md5($key);
+        $lock = parent::getKey($lock);
+        $md5Key = md5($lock);
 
-        $dir = Cml::getApplicationDir('runtime_cache_path') . DIRECTORY_SEPARATOR . 'LockFileCache' . DIRECTORY_SEPARATOR . substr($key, 0, strrpos($key, '/')) . DIRECTORY_SEPARATOR;
+        $dir = Cml::getApplicationDir('runtime_cache_path') . DIRECTORY_SEPARATOR . 'LockFileCache' . DIRECTORY_SEPARATOR . substr($lock, 0, strrpos($lock, '/')) . DIRECTORY_SEPARATOR;
         $dir .= substr($md5Key, 0, 2) . DIRECTORY_SEPARATOR . substr($md5Key, 2, 2);
         is_dir($dir) || mkdir($dir, 0700, true);
         return $dir . DIRECTORY_SEPARATOR . $md5Key . '.php';

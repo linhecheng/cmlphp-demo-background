@@ -6,18 +6,25 @@
  * @version  @see \Cml\Cml::VERSION
  * cmlphp框架 FastRoute封装实现 使用请先安装依赖composer require nikic/fast-route
  * *********************************************************** */
+
 namespace Cml\Service;
 
+use Closure;
 use Cml\Cml;
 use Cml\Config;
+use Cml\Interfaces\Middleware;
 use Cml\Interfaces\Route;
 use Cml\Lang;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
+use InvalidArgumentException;
+use Cml\Route as RouteFace;
+use function Cml\dd;
+use function FastRoute\simpleDispatcher;
 
 /**
  * Url解析类,负责路由及Url的解析
- * self::get('blog/bb/{aid:[0-9]+}' , 'adminbase/Public/login');
+ * $this->>get('blog/bb/{aid:[0-9]+}' , ['adminbase', 'Public', 'login']);
  *
  * @package Cml
  */
@@ -31,22 +38,30 @@ class FastRoute implements Route
     protected $routes = [];
 
     /**
-     * 是否启用分组
-     *
-     * @var false
-     */
-    private static $group = false;
-
-    /**
-     * 解析得到的请求信息 含应用名、控制器、操作
+     * 路由使用的中间件
      *
      * @var array
      */
-    private static $urlParams = [
+    private $middleware = [];
+
+    /**
+     * 是否启用分组
+     *
+     * @var array
+     */
+    private $group = [];
+
+    /**
+     * 解析得到的请求信息 含应用名、控制器、操作、路由绑定的中间件
+     *
+     * @var array
+     */
+    private $urlParams = [
         'path' => '',
         'controller' => '',
         'action' => '',
         'root' => '',
+        'middleware' => []
     ];
 
     /**
@@ -75,9 +90,9 @@ class FastRoute implements Route
     public function setUrlParams($key = 'path', $val = '')
     {
         if (is_array($key)) {
-            self::$urlParams = array_merge(self::$urlParams, $key);
+            $this->urlParams = array_merge($this->urlParams, $key);
         } else {
-            self::$urlParams[$key] = $val;
+            $this->urlParams[$key] = $val;
         }
     }
 
@@ -88,9 +103,9 @@ class FastRoute implements Route
      */
     public function getSubDirName()
     {
-        substr(self::$urlParams['root'], -1) != '/' && self::$urlParams['root'] .= '/';
-        substr(self::$urlParams['root'], 0, 1) != '/' && self::$urlParams['root'] = '/' . self::$urlParams['root'];
-        return self::$urlParams['root'];
+        substr($this->urlParams['root'], -1) != '/' && $this->urlParams['root'] .= '/';
+        substr($this->urlParams['root'], 0, 1) != '/' && $this->urlParams['root'] = '/' . $this->urlParams['root'];
+        return $this->urlParams['root'];
     }
 
     /**
@@ -100,11 +115,11 @@ class FastRoute implements Route
      */
     public function getAppName()
     {
-        if (!self::$urlParams['path']) {
-            $pathInfo = \Cml\Route::getPathInfo();
-            self::$urlParams['path'] = $pathInfo[0];//用于绑定系统命令
+        if (!$this->urlParams['path']) {
+            $pathInfo = RouteFace::getPathInfo();
+            $this->urlParams['path'] = $pathInfo[0];//用于绑定系统命令
         }
-        return trim(self::$urlParams['path'], '\\/');
+        return trim($this->urlParams['path'], '\\/');
     }
 
     /**
@@ -114,7 +129,7 @@ class FastRoute implements Route
      */
     public function getControllerName()
     {
-        return trim(self::$urlParams['controller'], '\\/');
+        return trim($this->urlParams['controller'], '\\/');
     }
 
     /**
@@ -124,7 +139,7 @@ class FastRoute implements Route
      */
     public function getActionName()
     {
-        return trim(self::$urlParams['action'], '\\/');
+        return trim($this->urlParams['action'], '\\/');
     }
 
     /**
@@ -134,7 +149,7 @@ class FastRoute implements Route
      */
     public function getFullPathNotContainSubDir()
     {
-        return self::getAppName() . '/' . self::getControllerName() . '/' . self::getActionName();
+        return $this->getAppName() . '/' . $this->getControllerName() . '/' . $this->getActionName();
     }
 
     /**
@@ -144,16 +159,19 @@ class FastRoute implements Route
      */
     public function parseUrl()
     {
-        \Cml\Route::parsePathInfo();
+        RouteFace::parsePathInfo();
 
-        $dispatcher = \FastRoute\simpleDispatcher(function (RouteCollector $r) {
+        $dispatcher = simpleDispatcher(function (RouteCollector $r) {
             foreach ($this->routes as $route) {
-                $r->addRoute($route['method'], $route['uri'], $route['action']);
+                $r->addRoute($route['method'], $route['uri'], [
+                    'action' => $route['action'],
+                    'middleware' => $this->middleware[$route['method'] . $route['uri']] ?? []
+                ]);
             }
         });
 
         $httpMethod = isset($_POST['_method']) ? strtoupper($_POST['_method']) : strtoupper($_SERVER['REQUEST_METHOD']);
-        $routeInfo = $dispatcher->dispatch($httpMethod, implode('/', \Cml\Route::getPathInfo()));
+        $routeInfo = $dispatcher->dispatch($httpMethod, implode('/', RouteFace::getPathInfo()));
 
         switch ($routeInfo[0]) {
             case Dispatcher::NOT_FOUND:
@@ -161,10 +179,13 @@ class FastRoute implements Route
                 break;
             case Dispatcher::FOUND:
                 $_GET += $routeInfo[2];
-                if (is_callable($routeInfo[1])) {
-                    \Cml\Route::executeCallableRoute($routeInfo[1], 'fastRoute');
+
+                $this->urlParams['middleware'] = $routeInfo[1]['middleware'];
+                $action = $routeInfo[1]['action'];
+                if ($action instanceof Closure) {
+                    RouteFace::executeCallableRoute($action, 'fastRoute');
                 }
-                $this->parseUrlParams($routeInfo[1]);
+                $this->parseUrlParams($action);
                 break;
         }
 
@@ -178,14 +199,22 @@ class FastRoute implements Route
      */
     private function parseUrlParams($uri)
     {
-        //is_array($action) ? $action['__rest'] = 1 :  ['__rest' => 0, '__action' => $action];
-        if (is_array($uri) && !isset($uri['__action'])) {
-            self::$urlParams['path'] = $uri[0];
-            self::$urlParams['controller'] = $uri[1];
+        if (is_array($uri) && class_exists($uri[0])) {
+            $this->urlParams['action'] = $uri[1];
+            if ($uri['__rest']) {
+                $this->urlParams['action'] = strtolower($_POST['_method'] ?? $_SERVER['REQUEST_METHOD']) . ucfirst($this->urlParams['action']);
+            }
+
+            $uri[0] = explode(Cml::getApplicationDir('app_controller_path_name') . '/', str_replace('\\', '/', $uri[0]));
+            $this->urlParams['path'] = trim($uri[0][0], '/');
+            $this->urlParams['controller'] = mb_substr(trim($uri[0][1], '/'), 0, -(mb_strlen(Config::get('controller_suffix'))));
+        } else if (is_array($uri) && !isset($uri['__action'])) {
+            $this->urlParams['path'] = $uri[0];
+            $this->urlParams['controller'] = $uri[1];
             if (isset($uri['__rest'])) {
-                self::$urlParams['action'] = strtolower(isset($_POST['_method']) ? $_POST['_method'] : $_SERVER['REQUEST_METHOD']) . ucfirst($uri[2]);
+                $this->urlParams['action'] = strtolower(isset($_POST['_method']) ? $_POST['_method'] : $_SERVER['REQUEST_METHOD']) . ucfirst($uri[2]);
             } else {
-                self::$urlParams['action'] = $uri[2];
+                $this->urlParams['action'] = $uri[2];
             }
         } else {
             $rest = false;
@@ -196,12 +225,12 @@ class FastRoute implements Route
             $path = '/';
             $routeArr = explode('/', $uri);
             if ($rest) {
-                self::$urlParams['action'] = strtolower(isset($_POST['_method']) ? $_POST['_method'] : $_SERVER['REQUEST_METHOD']) . ucfirst(array_pop($routeArr));
+                $this->urlParams['action'] = strtolower(isset($_POST['_method']) ? $_POST['_method'] : $_SERVER['REQUEST_METHOD']) . ucfirst(array_pop($routeArr));
             } else {
-                self::$urlParams['action'] = array_pop($routeArr);
+                $this->urlParams['action'] = array_pop($routeArr);
             }
 
-            self::$urlParams['controller'] = ucfirst(array_pop($routeArr));
+            $this->urlParams['controller'] = ucfirst(array_pop($routeArr));
             $controllerPath = '';
 
             $routeAppHierarchy = Config::get('route_app_hierarchy', 1);
@@ -213,10 +242,10 @@ class FastRoute implements Route
                     $controllerPath .= $dir . '/';
                 }
             }
-            self::$urlParams['controller'] = $controllerPath . self::$urlParams['controller'];
+            $this->urlParams['controller'] = $controllerPath . $this->urlParams['controller'];
             unset($routeArr);
 
-            self::$urlParams['path'] = $path ? $path : '/';
+            $this->urlParams['path'] = $path ? $path : '/';
             unset($path);
         }
 
@@ -226,7 +255,7 @@ class FastRoute implements Route
             $subDir = '';
         }
         //定义项目根目录地址
-        self::$urlParams['root'] = $subDir . '/';
+        $this->urlParams['root'] = $subDir . '/';
     }
 
     /**
@@ -236,16 +265,26 @@ class FastRoute implements Route
     public function getControllerAndAction()
     {
         //控制器所在路径
-        $appName = self::getAppName();
+        $appName = $this->getAppName();
         $className = $appName . ($appName ? '/' : '') . Cml::getApplicationDir('app_controller_path_name') .
-            '/' . self::getControllerName() . Config::get('controller_suffix');
+            '/' . $this->getControllerName() . Config::get('controller_suffix');
         $actionController = Cml::getApplicationDir('apps_path') . '/' . $className . '.php';
 
         if (is_file($actionController)) {
-            return ['class' => str_replace('/', '\\', $className), 'action' => self::getActionName(), 'route' => 'fastRoute'];
+            return ['class' => str_replace('/', '\\', $className), 'action' => $this->getActionName(), 'route' => 'fastRoute'];
         } else {
             return false;
         }
+    }
+
+    /**
+     * 获取中间件
+     *
+     * @return Middleware[]
+     */
+    public function getMiddleware()
+    {
+        return $this->urlParams['middleware'];
     }
 
     /**
@@ -253,12 +292,13 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function get($pattern, $action)
+    public function get($pattern, $action, $middleware = [])
     {
-        $this->addRoute('GET', $pattern, $action);
+        $this->addRoute('GET', $pattern, $action, $middleware);
 
         return $this;
     }
@@ -268,12 +308,13 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function post($pattern, $action)
+    public function post($pattern, $action, $middleware = [])
     {
-        $this->addRoute('POST', $pattern, $action);
+        $this->addRoute('POST', $pattern, $action, $middleware);
 
         return $this;
     }
@@ -283,12 +324,13 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function put($pattern, $action)
+    public function put($pattern, $action, $middleware = [])
     {
-        $this->addRoute('PUT', $pattern, $action);
+        $this->addRoute('PUT', $pattern, $action, $middleware);
 
         return $this;
     }
@@ -298,12 +340,13 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function patch($pattern, $action)
+    public function patch($pattern, $action, $middleware = [])
     {
-        $this->addRoute('PATCH', $pattern, $action);
+        $this->addRoute('PATCH', $pattern, $action, $middleware);
 
         return $this;
     }
@@ -313,12 +356,13 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function delete($pattern, $action)
+    public function delete($pattern, $action, $middleware = [])
     {
-        $this->addRoute('DELETE', $pattern, $action);
+        $this->addRoute('DELETE', $pattern, $action, $middleware);
 
         return $this;
     }
@@ -328,12 +372,13 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function options($pattern, $action)
+    public function options($pattern, $action, $middleware = [])
     {
-        $this->addRoute('OPTIONS', $pattern, $action);
+        $this->addRoute('OPTIONS', $pattern, $action, $middleware);
 
         return $this;
     }
@@ -343,12 +388,13 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function any($pattern, $action)
+    public function any($pattern, $action, $middleware = [])
     {
-        $this->addRoute($this->httpMethod, $pattern, $action);
+        $this->addRoute($this->httpMethod, $pattern, $action, $middleware);
         return $this;
     }
 
@@ -357,13 +403,14 @@ class FastRoute implements Route
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function rest($pattern, $action)
+    public function rest($pattern, $action, $middleware = [])
     {
         is_array($action) ? $action['__rest'] = 1 : $action = ['__rest' => 0, '__action' => $action];
-        $this->addRoute($this->httpMethod, $pattern, $action);
+        $this->addRoute($this->httpMethod, $pattern, $action, $middleware);
         return $this;
     }
 
@@ -372,37 +419,46 @@ class FastRoute implements Route
      *
      * @param string $namespace 分组名
      * @param callable $func 闭包
+     * @param array $middleware 使用的中间件
      */
-    public function group($namespace, callable $func)
+    public function group($namespace, callable $func, $middleware = [])
     {
         if (empty($namespace)) {
-            throw new \InvalidArgumentException(Lang::get('_NOT_ALLOW_EMPTY_', '$namespace'));
+            throw new InvalidArgumentException(Lang::get('_NOT_ALLOW_EMPTY_', '$namespace'));
         }
 
-        self::$group = trim($namespace, '/');
+        $this->group = [
+            'namespace' => trim($namespace, '/'),
+            'middleware' => $middleware
+        ];
 
         $func();
 
-        self::$group = false;
+        $this->group = null;
     }
 
     /**
      * 添加一个路由
      *
-     * @param  array|string $method
-     * @param  string $pattern
-     * @param  mixed $action
+     * @param array|string $method http请求方法
+     * @param string $pattern 路由规则
+     * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
+     *
      * @return void
      */
-    private function addRoute($method, $pattern, $action)
+    private function addRoute($method, $pattern, $action, $middleware)
     {
-
         if (is_array($method)) {
             foreach ($method as $verb) {
-                $this->routes[$verb . $pattern] = ['method' => $verb, 'uri' => self::patternFactory($pattern), 'action' => $action];
+                $uri = $this->patternFactory($pattern, $verb);
+                $this->routes[$verb . $uri] = ['method' => $verb, 'uri' => $uri, 'action' => $action];
+                $this->middleware[$verb . $uri] = array_merge($this->middleware[$verb . $uri] ?? [], $middleware);
             }
         } else {
-            $this->routes[$method . $pattern] = ['method' => $method, 'uri' => self::patternFactory($pattern), 'action' => $action];
+            $uri = $this->patternFactory($pattern, $method);
+            $this->routes[$method . $uri] = ['method' => $method, 'uri' => $uri, 'action' => $action];
+            $this->middleware[$method . $uri] = array_merge($this->middleware[$method . $uri] ?? [], $middleware);
         }
     }
 
@@ -410,13 +466,16 @@ class FastRoute implements Route
      * 组装路由规则
      *
      * @param $pattern
+     * @param string $requestMethod http方法
      *
      * @return string
      */
-    private function patternFactory($pattern)
+    private function patternFactory($pattern, $requestMethod)
     {
-        if (self::$group) {
-            return self::$group . '/' . ltrim($pattern);
+        if ($this->group) {
+            $pattern = $this->group['namespace'] . '/' . ltrim($pattern);
+            $this->middleware[$requestMethod . $pattern] = $this->group['middleware'];
+            return $pattern;
         } else {
             return $pattern;
         }

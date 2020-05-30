@@ -9,8 +9,8 @@
 
 namespace Cml\Lock;
 
-use Cml\Log;
 use Cml\Model;
+use Memcached;
 
 /**
  * 锁机制Memcache驱动
@@ -46,7 +46,6 @@ class Memcache extends Base
             $isLock = $inst->add($lock, $unique, 0, $this->expire);
         }
         if ($isLock) {
-            Log::error('lock', $lockValue = $inst->get($lock, null, \Memcached::GET_EXTENDED));
             $this->lockCache[$lock] = $unique;
             return true;
         }
@@ -86,7 +85,7 @@ class Memcache extends Base
         if ($inst->getDriverType() === 1) { //memcached
             $cas = 0;
             if (defined('Memcached::GET_EXTENDED')) {
-                $lockValue = $inst->getInstance()->get($lock, null, \Memcached::GET_EXTENDED);
+                $lockValue = $inst->getInstance()->get($lock, null, Memcached::GET_EXTENDED);
                 if (is_array($lockValue)) {
                     $cas = $lockValue['cas'];
                     $lockValue = $lockValue['value'];

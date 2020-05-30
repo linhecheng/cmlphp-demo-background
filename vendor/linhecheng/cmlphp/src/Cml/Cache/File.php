@@ -27,9 +27,9 @@ class File extends namespace\Base
     /**
      * 使用的缓存配置 默认为使用default_cache配置的参数
      *
-     * @param bool ｜array $conf
+     * @param array $conf
      */
-    public function __construct($conf = false)
+    public function __construct($conf)
     {
         $this->conf = $conf ? $conf : Config::get('default_cache');
         $this->conf['CACHE_PATH'] = isset($this->conf['CACHE_PATH']) ? $this->conf['CACHE_PATH'] : Cml::getApplicationDir('runtime_cache_path') . DIRECTORY_SEPARATOR . 'FileCache' . DIRECTORY_SEPARATOR;

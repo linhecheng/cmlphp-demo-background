@@ -27,7 +27,7 @@ class Input
     private static function parseInputToString($params)
     {
         return is_array($params) ? array_map(function ($item) {
-            return trim(htmlspecialchars($item, ENT_QUOTES, 'UTF-8'));
+            return is_array($item) ? self::parseInputToString($item) : trim(htmlspecialchars($item, ENT_QUOTES, 'UTF-8'));
         }, $params) : trim(htmlspecialchars($params, ENT_QUOTES, 'UTF-8'));
     }
 
@@ -41,7 +41,7 @@ class Input
     private static function parseInputToInt($params)
     {
         return is_array($params) ? array_map(function ($item) {
-            return intval($item);
+            return is_array($item) ? self::parseInputToInt($item) : intval($item);
         }, $params) : intval($params);
     }
 
@@ -55,7 +55,7 @@ class Input
     private static function parseInputToBool($params)
     {
         return is_array($params) ? array_map(function ($item) {
-            return ((bool)$item);
+            return is_array($item) ? self::parseInputToBool($item) : ((bool)$item);
         }, $params) : ((bool)$params);
     }
 

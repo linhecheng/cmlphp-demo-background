@@ -20,6 +20,7 @@ use Whoops\Exception\ErrorException;
 use Whoops\Handler\PlainTextHandler;
 use Whoops\Handler\PrettyPageHandler;
 use Whoops\Run;
+use function Cml\pd;
 
 /**
  * cml_error_or_exception服务Whoops实现
@@ -84,7 +85,7 @@ class Whoops implements ErrorOrException
             $error['message'] = Lang::get('_CML_ERROR_');
 
             if (Request::isCli()) {
-                \Cml\pd($error);
+                pd($error);
             } else {
                 header('HTTP/1.1 500 Internal Server Error');
                 View::getEngine('html')->reset()->assign('error', $error);

@@ -9,11 +9,13 @@
 
 namespace Cml\Exception;
 
+use RuntimeException;
+
 /**
  * 创建目录失败异常类
  *
  * @package Cml\Exception
  */
-class MkdirErrorException extends \RuntimeException
+class MkdirErrorException extends RuntimeException
 {
 }

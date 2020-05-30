@@ -9,6 +9,8 @@
 
 namespace Cml;
 
+use Cml\View\Html;
+
 /**
  * 视图渲染引擎 视图调度工厂
  *
@@ -21,7 +23,7 @@ class View
      *
      * @param string $engine 视图引擎 内置html/json/xml/excel
      *
-     * @return \Cml\View\Html
+     * @return Html
      */
     public static function getEngine($engine = null)
     {

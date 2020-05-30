@@ -29,16 +29,8 @@ class Environment implements EnvironmentInterface
         if (Request::isCli()) {
             return 'cli';
         }
-
-        if (isset($_SERVER['SERVER_NAME'])) {
-            $host = $_SERVER['SERVER_NAME'];
-        } else {
-            $host = $_SERVER['HTTP_HOST'];
-            if ($_SERVER['SERVER_PORT'] != 80) {
-                $host = explode(':', $host);
-                $host = $host[0];
-            }
-        }
+        php_sapi_name() === 'cli-server' && $_SERVER['SERVER_ADDR'] = '';
+        $host = Request::host(false);
 
         switch ($host) {
             case $_SERVER['SERVER_ADDR'] :

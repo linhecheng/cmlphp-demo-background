@@ -9,6 +9,8 @@
 
 namespace Cml\Console\Format;
 
+use InvalidArgumentException;
+
 /**
  * 命令行工具-控制台颜色处理类
  *
@@ -133,11 +135,11 @@ class Colour
         } else if (is_string($color)) {
             list($color, $option) = explode('+', strtolower($color));
             if (!isset(self::$colors[$color])) {
-                throw new \InvalidArgumentException("Unknown color '$color'");
+                throw new InvalidArgumentException("Unknown color '$color'");
             }
 
             if ($option && !isset(self::$options[$option])) {
-                throw new \InvalidArgumentException("Unknown option '$option'");
+                throw new InvalidArgumentException("Unknown option '$option'");
             }
 
             $code = self::$colors[$color];

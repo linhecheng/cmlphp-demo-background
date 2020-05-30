@@ -1,6 +1,4 @@
 <?php
-
-namespace Cml;
 /* * *********************************************************
  * [cmlphp] (C)2012 - 3000 http://cmlphp.com
  * @Author  linhecheng<linhechengbush@live.com>
@@ -9,6 +7,16 @@ namespace Cml;
  * cmlphp框架 容器
  * *********************************************************** */
 
+namespace Cml;
+
+use Closure;
+use InvalidArgumentException;
+
+/**
+ *容器
+ *
+ * @package Cml
+ */
 class Container
 {
 
@@ -125,7 +133,7 @@ class Container
      * 绑定单例服务
      *
      * @param  string|array $abstract 服务的名称
-     * @param  \Closure|string|null $concrete
+     * @param  Closure|string|null $concrete
      * @return $this
      */
     public function singleton($abstract, $concrete = null)
@@ -137,7 +145,7 @@ class Container
      * 实例化服务
      *
      * @param mixed $abstract 服务的名称
-     * @param mixed $parameters 参数
+     * @param array $parameters 参数
      *
      * @return mixed
      */
@@ -152,15 +160,15 @@ class Container
         }
 
         if (!isset($this->binds[$abstract])) {
-            throw new \InvalidArgumentException(Lang::get('_CONTAINER_MAKE_PARAMS_ERROR_', $abstract));
+            throw new InvalidArgumentException(Lang::get('_CONTAINER_MAKE_PARAMS_ERROR_', $abstract));
         }
 
-        if ($this->binds[$abstract]['concrete'] instanceof \Closure) {
+        if ($this->binds[$abstract]['concrete'] instanceof Closure) {
             array_unshift($parameters, $this);
             $instance = call_user_func_array($this->binds[$abstract]['concrete'], (array)$parameters);
         } else {
             $concrete = $this->binds[$abstract]['concrete'];
-            $instance = new $concrete($parameters);
+            $instance = new $concrete(...(array)$parameters);
         }
         $this->binds[$abstract]['singleton'] && $this->instances[$abstract] = $instance;
 

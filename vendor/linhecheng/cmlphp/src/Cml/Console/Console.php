@@ -13,6 +13,8 @@ use Cml\Console\Commands\Help;
 use Cml\Console\Format\Colour;
 use Cml\Console\IO\Input;
 use Cml\Console\IO\Output;
+use Exception;
+use InvalidArgumentException;
 
 /**
  * 注册可用的命令并执行
@@ -47,7 +49,9 @@ class Console implements \Cml\Interfaces\Console
         'seed:create' => 'Cml\Console\Commands\Migrate\SeedCreate',
         'seed:run' => 'Cml\Console\Commands\Migrate\SeedRun',
         //api auto test
-        'api-test' => 'Cml\Console\Commands\ApiAutoTest'
+        'api-test' => 'Cml\Console\Commands\ApiAutoTest',
+        //start dev server
+        'server:run' => 'Cml\Console\Commands\StartServer'
     ];
 
     /**
@@ -140,7 +144,7 @@ class Console implements \Cml\Interfaces\Console
     public function getCommand($name)
     {
         if (!isset($this->commands[$name])) {
-            throw new \InvalidArgumentException("Command '$name' does not exist");
+            throw new InvalidArgumentException("Command '$name' does not exist");
         }
         return $this->commands[$name];
     }
@@ -174,7 +178,7 @@ class Console implements \Cml\Interfaces\Console
             $command = count($args) ? array_shift($args) : 'help';
 
             if (!isset($this->commands[$command])) {
-                throw new \InvalidArgumentException("Command '$command' does not exist");
+                throw new InvalidArgumentException("Command '$command' does not exist");
             }
 
             isset($options['no-ansi']) && Colour::setNoAnsi();
@@ -187,7 +191,7 @@ class Console implements \Cml\Interfaces\Console
             $command = explode('::', $this->commands[$command]);
 
             return call_user_func_array([new $command[0]($this), isset($command[1]) ? $command[1] : 'execute'], [$args, $options]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Output::writeException($e);
             exit(1);
         }

@@ -11,7 +11,6 @@ namespace Cml\Http;
 
 use Cml\Cml;
 use Cml\Config;
-use Cml\Log;
 use Cml\Route;
 
 /**
@@ -24,15 +23,19 @@ class Request
     /**
      * 获取IP地址
      *
+     * @param bool $prox 是否只获取代理Ip
+     *
      * @return string
      */
-    public static function ip()
+    public static function ip($prox = false)
     {
-        if (isset($_SERVER['HTTP_CLIENT_IP'])) {
-            return strip_tags($_SERVER['HTTP_CLIENT_IP']);
-        }
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return strip_tags($_SERVER['HTTP_X_FORWARDED_FOR']);
+        if ($prox) {
+            if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+                return strip_tags($_SERVER['HTTP_CLIENT_IP']);
+            }
+            if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                return strip_tags($_SERVER['HTTP_X_FORWARDED_FOR']);
+            }
         }
         if (isset($_SERVER['REMOTE_ADDR'])) {
             return strip_tags($_SERVER['REMOTE_ADDR']);
@@ -59,7 +62,7 @@ class Request
      */
     public static function host($joinPort = true)
     {
-        $host = strip_tags(isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : $_SERVER['HTTP_HOST']);
+        $host = strip_tags(isset($_SERVER['HTTP_HOST']) ? explode(':', $_SERVER['HTTP_HOST'])[0] : $_SERVER['SERVER_NAME']);
         $joinPort && $host = $host . (in_array($_SERVER['SERVER_PORT'], [80, 443]) ? '' : ':' . $_SERVER['SERVER_PORT']);
         return $host;
     }
@@ -219,7 +222,7 @@ class Request
     /**
      * 获取SERVICE信息
      *
-     * @param  string $name SERVER的键值名称
+     * @param string $name SERVER的键值名称
      *
      * @return string
      */
@@ -267,66 +270,15 @@ class Request
      */
     public static function curl($url, $parameter = [], $header = [], $type = 'json', $connectTimeout = 10, $execTimeout = 30, $writeLog = false, $cusFunc = null)
     {
-        $ssl = substr($url, 0, 8) == "https://" ? true : false;
-        $ch = curl_init();
-        if ($ssl) {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); //信任任何证书
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2); //检查证书中是否设置域名
-        }
-
-        if ($type == 'json' || $type == 'raw') {
-            $type == 'json' && ($parameter = json_encode($parameter, JSON_UNESCAPED_UNICODE)) && ($header[] = 'Content-Type: application/json');
-            //$queryStr = str_replace(['\/','[]'], ['/','{}'], $queryStr);//兼容
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $parameter);
-        } else if ($type == 'post') {
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($parameter));
-        } else if ($type == 'file') {
-            $isOld = substr($parameter['file'], 0, 1) == '@';
-            if (function_exists('curl_file_create')) {
-                $parameter['file'] = curl_file_create($isOld ? substr($parameter['file'], 1) : $parameter['file'], '');
-            } else {
-                $isOld || $parameter['file'] = '@' . $parameter['file'];
-            }
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $parameter);
-        } else {
-            $queryStr = '';
-            if (is_array($parameter)) {
-                foreach ($parameter as $key => $val) {
-                    $queryStr .= $key . '=' . $val . '&';
-                }
-                $queryStr = substr($queryStr, 0, -1);
-                $queryStr && $url .= '?' . $queryStr;
-            }
-        }
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_HEADER, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $execTimeout);
-
-        if (!empty($header)) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-        }
-        is_callable($cusFunc) && $cusFunc($ch);
-
-        $ret = curl_exec($ch);
-        $error = curl_error($ch);
-        curl_close($ch);
-        if (!$ret || !empty($error)) {
-            $writeLog && Log::error('curl-error', [
-                'url' => $url,
-                'params' => $parameter,
-                'error' => $error,
-                'ret' => $ret
-            ]);
-            return false;
-        } else {
-            return $ret;
-        }
+        $curlClient = new CurlClient($url);
+        return $curlClient->setRequestParams($parameter)
+            ->setRequestHeader($header)
+            ->setRequestType($type)
+            ->setConnectTimeout($connectTimeout)
+            ->setExecTimeout($execTimeout)
+            ->setErrorIsWriteLog($writeLog)
+            ->setCustomHandler($cusFunc)
+            ->sendRequest(false);
     }
 
     /**

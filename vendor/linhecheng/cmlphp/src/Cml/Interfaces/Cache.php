@@ -8,6 +8,10 @@
  * *********************************************************** */
 namespace Cml\Interfaces;
 
+use Memcache;
+use Memcached;
+use Redis;
+
 /**
  * 缓存驱动抽象接口
  *
@@ -19,9 +23,9 @@ interface Cache
     /**
      * 使用的缓存配置 默认为使用default_cache配置的参数
      *
-     * @param bool ｜array $conf
+     * @param array $conf
      */
-    public function __construct($conf = false);
+    public function __construct($conf);
 
     /**
      * 根据key取值
@@ -95,7 +99,7 @@ interface Cache
      *
      * @param string $key
      *
-     * @return \Redis | \Memcache | \Memcached
+     * @return Redis | Memcache | Memcached
      */
     public function getInstance($key = '');
 }

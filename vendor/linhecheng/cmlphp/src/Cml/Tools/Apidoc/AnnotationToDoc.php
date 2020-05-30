@@ -13,6 +13,9 @@ use Cml\Cml;
 use Cml\Config;
 use Cml\Lang;
 use Cml\View;
+use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionMethod;
 
 /**
  * 从注释生成文档实现类
@@ -33,7 +36,7 @@ class AnnotationToDoc
     public static function parse($theme = 'layui', $onCurrentApp = true, $render = true)
     {
         if (!in_array($theme, ['bootstrap', 'layui'])) {
-            throw new \InvalidArgumentException(Lang::get('_PARAM_ERROR_', 'theme', '[bootstrap / layui]'));
+            throw new InvalidArgumentException(Lang::get('_PARAM_ERROR_', 'theme', '[bootstrap / layui]'));
         }
         $result = [];
         $app = is_string($onCurrentApp) ? $onCurrentApp : (Config::get('route_app_hierarchy', 1) < 1 ? true : false);
@@ -81,8 +84,8 @@ class AnnotationToDoc
     {
         $result = [];
 
-        $reflection = new \ReflectionClass($controller);
-        $res = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+        $reflection = new ReflectionClass($controller);
+        $res = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
         foreach ($res as $method) {
             if ($method->name == $action) {
                 $annotation = $method->getDocComment();

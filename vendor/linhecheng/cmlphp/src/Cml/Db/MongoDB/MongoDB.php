@@ -14,6 +14,8 @@ use Cml\Config;
 use Cml\Db\Base;
 use Cml\Debug;
 use Cml\Lang;
+use Exception;
+use InvalidArgumentException;
 use MongoDB\BSON\Regex;
 use MongoDB\Driver\BulkWrite;
 use MongoDB\Driver\Command;
@@ -23,6 +25,7 @@ use MongoDB\Driver\Query;
 use MongoDB\Driver\Exception\BulkWriteException;
 use MongoDB\Driver\Exception\Exception as MongoDBDriverException;
 use MongoDB\Driver\ReadPreference;
+use \Generator;
 
 /**
  * Orm MongoDB数据库MongoDB实现类
@@ -172,7 +175,7 @@ class MongoDB extends Base
      * @param bool $noCondition 是否为无条件操作  set/delete/update操作的时候 condition为空是正常的不报异常
      * @param bool $noTable 是否可以没有数据表 当delete/update等操作的时候已经执行了table() table为空是正常的
      *
-     * @return array eg: ['forum', "`fid` = '1' AND `uid` = '2'"]
+     * @return array eg: ['forum', "fid = '1' AND uid = '2'"]
      */
     protected function parseKey($key, $and = true, $noCondition = false, $noTable = false)
     {
@@ -186,10 +189,10 @@ class MongoDB extends Base
         }
 
         if (empty($table) && !$noTable) {
-            throw new \InvalidArgumentException(Lang::get('_DB_PARAM_ERROR_PARSE_KEY_', $key, 'table'));
+            throw new InvalidArgumentException(Lang::get('_DB_PARAM_ERROR_PARSE_KEY_', $key, 'table'));
         }
         if (empty($condition) && !$noCondition) {
-            throw new \InvalidArgumentException(Lang::get('_DB_PARAM_ERROR_PARSE_KEY_', $key, 'condition'));
+            throw new InvalidArgumentException(Lang::get('_DB_PARAM_ERROR_PARSE_KEY_', $key, 'condition'));
         }
 
         return [$table, $condition];
@@ -197,6 +200,8 @@ class MongoDB extends Base
 
     /**
      * 根据key取出数据
+     *
+     * @deprecated
      *
      * @param string $key get('user-uid-123');
      * @param bool $and 多个条件之间是否为and  true为and false为or
@@ -280,6 +285,7 @@ class MongoDB extends Base
             'having' => '',
         ];
 
+        $this->forceIndex = [];//强制索引
         $this->table = []; //操作的表
         $this->join = []; //是否内联
         $this->leftJoin = []; //是否左联结
@@ -393,7 +399,7 @@ class MongoDB extends Base
      *
      * @return bool|int
      */
-    public function set($table, $data, $tablePrefix = null)
+    public function insert($table, $data, $tablePrefix = null)
     {
         if (is_array($data)) {
             is_null($tablePrefix) && $tablePrefix = $this->tablePrefix;
@@ -421,15 +427,16 @@ class MongoDB extends Base
      * @param array $data eg: 多条数据的值 [['标题1', '内容1', 1, '2017'], ['标题2', '内容2', 1, '2017']]
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
      * @param bool $openTransAction 是否开启事务 mongodb中本参数无效
-     * @throws \InvalidArgumentException
+     
+     * @throws InvalidArgumentException
      *
      * @return bool|array
      */
-    public function setMulti($table, $field, $data, $tablePrefix = null, $openTransAction = true)
+    public function insertMulti($table, $field, $data, $tablePrefix = null, $openTransAction = true)
     {
         $idArray = [];
         foreach ($data as $row) {
-            $idArray[] = $this->set($table, $row, $tablePrefix);
+            $idArray[] = $this->insert($table, $row, $tablePrefix);
         }
         return $idArray;
     }
@@ -457,23 +464,28 @@ class MongoDB extends Base
      * @param array $data 插入的值 eg: ['username'=>'admin', 'email'=>'linhechengbush@live.com']
      * @param array $up mongodb中此项无效
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
+     * @param array $upIgnoreField 更新的时候要忽略的的字段
      *
      * @return int
      */
-    public function upSet($table, array $data = [], array $up = [], $tablePrefix = null)
+    public function upSet($table, array $data = [], array $up = [], $tablePrefix = null, $upIgnoreField = [])
     {
         is_null($tablePrefix) && $tablePrefix = $this->tablePrefix;
         $tableName = $tablePrefix . $table;
         if (empty($tableName)) {
-            throw new \InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_TABLE_', 'upSet'));
+            throw new InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_TABLE_', 'upSet'));
         }
         $condition = $this->sql['where'];
         if (empty($condition)) {
-            throw new \InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_CONDITION_', 'upSet'));
+            throw new InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_CONDITION_', 'upSet'));
         }
 
+        $up = array_merge($data, $up);
+        foreach ($upIgnoreField as $key) {
+            unset($up[$key]);
+        }
         $bulk = new BulkWrite();
-        $bulk->update($condition, ['$set' => array_merge($data, $up)], ['multi' => true, 'upsert' => true]);
+        $bulk->update($condition, ['$set' => $up], ['multi' => true, 'upsert' => true]);
         $result = $this->runMongoBulkWrite($tableName, $bulk);
 
         Cml::$debug && $this->debugLogSql('BulkWrite upSet', $tableName, $condition, $data);
@@ -482,14 +494,14 @@ class MongoDB extends Base
     }
 
     /**
-     * 根据key更新一条数据
+     * 更新数据
      *
      * @param string|array $key eg 'user-uid-$uid' 如果条件是通用whereXX()、表名是通过table()设定。这边可以直接传$data的数组
      * @param array | null $data eg: ['username'=>'admin', 'email'=>'linhechengbush@live.com']
      * @param bool $and 多个条件之间是否为and  true为and false为or
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
      *
-     * @return boolean
+     * @return int
      */
     public function update($key, $data = null, $and = true, $tablePrefix = null)
     {
@@ -504,11 +516,11 @@ class MongoDB extends Base
 
         $tableName = empty($tableName) ? $this->getRealTableName(key($this->table)) : $tablePrefix . $tableName;
         if (empty($tableName)) {
-            throw new \InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_TABLE_', 'update'));
+            throw new InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_TABLE_', 'update'));
         }
         $condition += $this->sql['where'];
         if (empty($condition)) {
-            throw new \InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_CONDITION_', 'update'));
+            throw new InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_CONDITION_', 'update'));
         }
 
         $bulk = new BulkWrite();
@@ -527,7 +539,7 @@ class MongoDB extends Base
      * @param bool $and 多个条件之间是否为and  true为and false为or
      * @param mixed $tablePrefix 表前缀 不传则获取配置中配置的前缀
      *
-     * @return boolean
+     * @return int
      */
     public function delete($key = '', $and = true, $tablePrefix = null)
     {
@@ -538,11 +550,11 @@ class MongoDB extends Base
 
         $tableName = empty($tableName) ? $this->getRealTableName(key($this->table)) : $tablePrefix . $tableName;
         if (empty($tableName)) {
-            throw new \InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_TABLE_', 'delete'));
+            throw new InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_TABLE_', 'delete'));
         }
         $condition += $this->sql['where'];
         if (empty($condition)) {
-            throw new \InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_CONDITION_', 'delete'));
+            throw new InvalidArgumentException(Lang::get('_PARSE_SQL_ERROR_NO_CONDITION_', 'delete'));
         }
 
         $bulk = new BulkWrite();
@@ -598,21 +610,23 @@ class MongoDB extends Base
      * @param string $column 如 id  user.id (这边的user为表别名如表pre_user as user 这边用user而非带前缀的原表名)
      * @param array|int|string $value 值
      * @param string $operator 操作符
-     * @throws \Exception
+     
+     * @throws Exception
      *
      * @return $this
      */
     public function conditionFactory($column, $value, $operator = '=')
     {
+        $operator && $operator = strtoupper($operator);
         $currentOrIndex = isset($this->sql['where']['$or']) ? count($this->sql['where']['$or']) - 1 : 0;
 
         if ($this->opIsAnd) {
             if (isset($this->sql['where'][$column][$operator])) {
-                throw new \InvalidArgumentException('Mongodb Where Op key Is Exists[' . $column . $operator . ']');
+                throw new InvalidArgumentException('Mongodb Where Op key Is Exists[' . $column . $operator . ']');
             }
         } else if ($this->bracketsIsOpen) {
             if (isset($this->sql['where']['$or'][$currentOrIndex][$column][$operator])) {
-                throw new \InvalidArgumentException('Mongodb Where Op key Is Exists[' . $column . $operator . ']');
+                throw new InvalidArgumentException('Mongodb Where Op key Is Exists[' . $column . $operator . ']');
             }
         }
 
@@ -736,10 +750,10 @@ class MongoDB extends Base
                     $this->sql['where']['$or'][][$column] = $value;
                 }
                 break;
-            case 'column':
+            case 'COLUMN':
                 $this->sql['where']['$where'] = "this.{$column} = this.{$value}";
                 break;
-            case 'raw':
+            case 'RAW':
                 $this->sql['where']['$where'] = $column;
                 break;
         }
@@ -1177,10 +1191,11 @@ class MongoDB extends Base
      * @param int $offset 偏移量
      * @param int $limit 返回的条数
      * @param bool $useMaster 是否使用主库 默认读取从库
+     * @param mixed $fieldAsKey 返回以某个字段做为key的数组
      *
      * @return array
      */
-    public function select($offset = null, $limit = null, $useMaster = false)
+    public function select($offset = null, $limit = null, $useMaster = false, $fieldAsKey = false)
     {
         is_null($offset) || $this->limit($offset, $limit);
 
@@ -1190,12 +1205,38 @@ class MongoDB extends Base
         isset($this->sql['limit'][0]) && $filter['skip'] = $this->sql['limit'][0];
         isset($this->sql['limit'][1]) && $filter['limit'] = $this->sql['limit'][1];
 
-        return $this->runMongoQuery(
-            $this->getRealTableName(key($this->table)),
+        $tableName = $this->getRealTableName(key($this->table));
+        $this->forceIndex[$tableName] && $filter['hint'] = $this->forceIndex[$tableName];
+
+        $return = $this->runMongoQuery(
+            $tableName,
             $this->sql['where'],
             $filter,
             $useMaster
         );
+
+        if ($fieldAsKey) {
+            $result = [];
+            foreach ($return as $row) {
+                $result[$row[$fieldAsKey]] = $row;
+            }
+            $return = $result;
+        }
+        return $return;
+    }
+
+    /**
+     * 返回一个迭代器
+     *
+     * @param int $offset 偏移量
+     * @param int $limit 返回的条数
+     * @param bool $useMaster 是否使用主库 默认读取从库
+     *
+     * @return Generator
+     */
+    public function cursor($offset = null, $limit = null, $useMaster = false)
+    {
+        $this->logNotSupportMethod(__METHOD__);
     }
 
     /**

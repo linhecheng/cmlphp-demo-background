@@ -9,11 +9,13 @@
 
 namespace Cml\Exception;
 
+use RuntimeException;
+
 /**
  * 配置文件加载失败异常类
  *
  * @package Cml\Exception
  */
-class ConfigNotFoundException extends \RuntimeException
+class ConfigNotFoundException extends RuntimeException
 {
 }

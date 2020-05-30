@@ -205,13 +205,28 @@ function humpToLine($str)
 /**
  * 下划线转驼峰
  *
- * @param  string $value
+ * @param string $value
+ * @param bool $upper 首字母大写还是小写
  *
  * @return string
  */
-function studlyCase($value)
+function studlyCase($value, $upper = true)
 {
-    return str_replace(' ', '', ucwords(str_replace(array('-', '_'), ' ', $value)));
+    $value = str_replace(' ', '', ucwords(str_replace(array('-', '_'), ' ', $value)));
+    $upper || $value = lcfirst($value);
+    return $value;
+}
+
+/**
+ * 获取
+ * @param $class
+ * @return string
+ */
+function getClassBasename($class, $humpToLine = false)
+{
+    $class = is_object($class) ? get_class($class) : $class;
+    $class = basename(str_replace('\\', '/', $class));
+    return $humpToLine ? humpToLine(lcfirst($class)) : $class;
 }
 
 /**

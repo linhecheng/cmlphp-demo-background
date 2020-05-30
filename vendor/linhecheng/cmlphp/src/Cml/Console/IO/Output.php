@@ -12,6 +12,7 @@ namespace Cml\Console\IO;
 use Cml\Console\Format\Colour;
 use Cml\Console\Format\Format;
 use Cml\Console\Component\Box;
+use Exception;
 
 /**
  * 命令行工具-输出管道
@@ -49,7 +50,7 @@ class Output
      */
     public static function writeException($e)
     {
-        if ($e instanceof \Exception) {
+        if ($e instanceof Exception) {
             $text = sprintf("%s\n[%s]\n%s", $e->getFile() . ':' . $e->getLine(), get_class($e), $e->getMessage());
         } else {
             $text = $e;

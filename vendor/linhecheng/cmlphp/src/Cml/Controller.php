@@ -9,8 +9,14 @@
 
 namespace Cml;
 
+use Cml\Exception\ControllerNotFoundException;
 use Cml\Http\Request;
 use Cml\Http\Response;
+use Cml\Lock\File;
+use Cml\Lock\Memcache;
+use Cml\Lock\Redis;
+use Exception;
+use Cml\Http\Message\Response as PsrResponse;
 
 /**
  * 框架基础控制器,所有控制器都要继承该类
@@ -21,33 +27,40 @@ class Controller
 {
 
     /**
-     * 当执行的控制器方法返回数组且http请求头HTTP_ACCEPT为html时。默认渲染的tpl为"控制器名/方法名"
-     * 这边配置[请求的控制器方法=>对应渲染的模板]则渲染配置的模板。当[请求的控制器方法=>对应渲染的模板为string]自动调用display方法
-     * 当[请求的控制器方法=>对应渲染的模板为 array]自动调用html engine的displayWithLayout方法
-     *
+     * @deprecated
      * @var array
      */
     protected $htmlEngineRenderTplArray = [];
 
     /**
+     * 自定义异常处理
+     *
+     * @param Exception $e
+     *
+     * @throws Exception
+     */
+    protected function customHandlerActionException(Exception $e)
+    {
+        throw $e;
+    }
+
+    /**
      * 运行对应的控制器
      *
      * @param string $method 要执行的控制器方法
+     * @param Request $request
+     * @param Response $response
      *
      * @return void
+     * @throws Exception
+     *
      */
-    final public function runAppController($method)
+    final public function runAppController($method, $request = null, $response = null)
     {
+        method_exists($this, 'mapPsr7') && $this->mapPsr7($request, $response);
+
         //检测csrf跨站攻击
         Secure::checkCsrf(Config::get('check_csrf'));
-
-        // 关闭GPC过滤 防止数据的正确性受到影响 在db层防注入
-        if (get_magic_quotes_gpc()) {
-            Secure::stripslashes($_GET);
-            Secure::stripslashes($_POST);
-            Secure::stripslashes($_COOKIE);
-            Secure::stripslashes($_REQUEST); //在程序中对get post cookie的改变不影响 request的值
-        }
 
         //session保存方式自定义
         if (Config::get('session_user')) {
@@ -65,33 +78,36 @@ class Controller
 
         //根据动作去找对应的方法
         if (method_exists($this, $method)) {
-            $response = $this->$method();
-            if (is_array($response)) {
-                if (Request::acceptJson()) {
-                    View::getEngine('Json')
-                        ->assign($response)
-                        ->display();
-                } else {
-                    $tpl = isset($this->htmlEngineRenderTplArray[$method])
-                        ? $this->htmlEngineRenderTplArray[$method]
-                        : Cml::getContainer()->make('cml_route')->getControllerName() . '/' . $method;
+            try {
+                $response = $this->$method();
+                if ($response instanceof PsrResponse) {
+                    return $response;
+                } elseif (is_array($response)) {
+                    if (Request::acceptJson()) {
+                        View::getEngine('Json')
+                            ->assign($response)
+                            ->display();
+                    } else {
+                        $tpl = isset($this->htmlEngineRenderTplArray[$method])
+                            ? $this->htmlEngineRenderTplArray[$method]
+                            : Cml::getContainer()->make('cml_route')->getControllerName() . '/' . $method;
+                        $tpl = str_replace('\\', '/', $tpl);
 
-                    call_user_func_array([View::getEngine('Html')->assign($response), is_array($tpl) ? 'displayWithLayout' : 'display'], is_array($tpl) ? $tpl : [$tpl]);
+                        call_user_func_array([View::getEngine('Html')->assign($response), is_array($tpl) ? 'displayWithLayout' : 'display'], is_array($tpl) ? $tpl : [$tpl]);
+                    }
                 }
+            } catch (Exception $e) {
+                $this->customHandlerActionException($e);
             }
-        } elseif (Cml::$debug) {
-            Cml::montFor404Page();
-            throw new \BadMethodCallException(Lang::get('_ACTION_NOT_FOUND_', $method));
         } else {
-            Cml::montFor404Page();
-            Response::show404Page();
+            throw new ControllerNotFoundException(Lang::get('_ACTION_NOT_FOUND_', $method));
         }
     }
 
     /**
      * 获取模型方法
      *
-     * @return \Cml\Model
+     * @return Model
      */
     public function model()
     {
@@ -103,8 +119,8 @@ class Controller
      *
      * @param string|null $useCache 使用的锁的配置
      *
-     * @return \Cml\Lock\Redis | \Cml\Lock\Memcache | \Cml\Lock\File | false
-     * @throws \Exception
+     * @return Redis | Memcache | File | false
+     * @throws Exception
      */
     public function locker($useCache = null)
     {

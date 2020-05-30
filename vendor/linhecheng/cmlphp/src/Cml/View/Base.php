@@ -6,6 +6,7 @@
  * @version  @see \Cml\Cml::VERSION
  * cmlphp框架 视图渲染引擎 抽象基类
  * *********************************************************** */
+
 namespace Cml\View;
 
 use Cml\Interfaces\View;
@@ -23,6 +24,50 @@ abstract class Base implements View
      * @var array
      */
     protected $args = [];
+
+    /**
+     * 响应头
+     *
+     * @var array
+     */
+    protected $header = [];
+
+    /**
+     * 获取响应头
+     *
+     * @return array
+     */
+    public function getHeader()
+    {
+        return $this->header;
+    }
+
+    /**
+     * 设置要响应的头
+     *
+     * @param string $key
+     * @param string $val
+     *
+     * @return $this
+     */
+    public function setHeader($key, $val)
+    {
+        $this->header[$key] = $val;
+        return $this;
+    }
+
+    /**
+     * 发送响应头
+     *
+     * @return $this
+     */
+    public function sendHeader()
+    {
+        foreach ($this->header as $key => $val) {
+            header("{$key}: {$val}");
+        }
+        return $this;
+    }
 
     /**
      * 变量赋值

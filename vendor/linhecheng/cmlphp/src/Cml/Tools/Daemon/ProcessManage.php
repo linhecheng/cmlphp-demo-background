@@ -6,12 +6,13 @@
  * @version  @see \Cml\Cml::VERSION
  * cmlphp框架 守护进程工作进程
  * *********************************************************** */
+
 namespace Cml\Tools\Daemon;
 
 use Cml\Cml;
 use Cml\Console\Format\Colour;
 use Cml\Console\IO\Output;
-use Cml\Exception\PhpExtendNotInstall;
+use Cml\Exception\PhpExtendNotInstallException;
 
 /**
  * 守护进程工作进程工作类
@@ -32,12 +33,12 @@ class ProcessManage
     private static function checkExtension()
     {
         if (!extension_loaded('posix')) {
-            throw new PhpExtendNotInstall('please install PHP posix extension!');
+            throw new PhpExtendNotInstallException('please install PHP posix extension!');
         }
 
         // 检查扩展
         if (!extension_loaded('pcntl')) {
-            throw new PhpExtendNotInstall('please install PHP pcntl extension!');
+            throw new PhpExtendNotInstallException('please install PHP pcntl extension!');
         }
 
     }
@@ -115,9 +116,9 @@ class ProcessManage
         defined('STDIN') && fclose(STDIN);
         defined('STDOUT') && fclose(STDOUT);
         defined('STDERR') && fclose(STDERR);
-        $stdin = fopen(self::$log, 'r');
-        $stdout = fopen(self::$log, 'a');
-        $stderr = fopen(self::$log, 'a');
+        fopen(self::$log, 'r');
+        fopen(self::$log, 'a');
+        fopen(self::$log, 'a');
 
         self::setUser(self::$user);
 

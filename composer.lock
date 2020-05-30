@@ -1,27 +1,27 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8e98a4a0a58eae3c81ee9ed22d16876c",
+    "content-hash": "f1dbb3efa88d3d56ec3144937539b731",
     "packages": [
         {
             "name": "linhecheng/cmlphp",
-            "version": "dev-dev",
+            "version": "dev-master",
             "source": {
                 "type": "git",
                 "url": "https://github.com/linhecheng/cmlphp.git",
-                "reference": "17ff3036ceabedf60d9f8d0a7a2ccafb36fd9a31"
+                "reference": "a245a0dbe50c46b6fc4e7e60a28523617ea1e69e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/linhecheng/cmlphp/zipball/17ff3036ceabedf60d9f8d0a7a2ccafb36fd9a31",
-                "reference": "17ff3036ceabedf60d9f8d0a7a2ccafb36fd9a31",
+                "url": "https://api.github.com/repos/linhecheng/cmlphp/zipball/a245a0dbe50c46b6fc4e7e60a28523617ea1e69e",
+                "reference": "a245a0dbe50c46b6fc4e7e60a28523617ea1e69e",
                 "shasum": "",
                 "mirrors": [
                     {
-                        "url": "https://dl.laravel-china.org/%package%/%reference%.%type%",
+                        "url": "https://mirrors.aliyun.com/composer/dists/%package%/%reference%.%type%",
                         "preferred": true
                     }
                 ]
@@ -29,7 +29,7 @@
             "require": {
                 "ext-curl": "*",
                 "ext-json": "*",
-                "php": ">=5.4.0"
+                "php": ">=7.0"
             },
             "require-dev": {
                 "phpunit/phpunit": "6.*"
@@ -58,7 +58,7 @@
             "keywords": [
                 "cmlphp"
             ],
-            "time": "2019-05-10T11:42:18+00:00"
+            "time": "2020-05-30T14:53:46+00:00"
         }
     ],
     "packages-dev": [],
@@ -70,7 +70,8 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=5.4.0"
+        "php": ">=7.0"
     },
-    "platform-dev": []
+    "platform-dev": [],
+    "plugin-api-version": "1.1.0"
 }

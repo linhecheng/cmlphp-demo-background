@@ -9,6 +9,7 @@ namespace Cml\Tools\Apidoc;
 
 use Cml\Http\Request;
 use Cml\Plugin;
+use InvalidArgumentException;
 
 /**
  * 从代码注释提取接口信息自动运行测试类
@@ -47,7 +48,7 @@ class AutoTest
                 ], $api['req']);
 
                 if (false == json_decode($api['req'])) {
-                    throw new \InvalidArgumentException("req is not Invalid JSON![method:($method)], [params:({$api['req']})]");
+                    throw new InvalidArgumentException("req is not Invalid JSON![method:($method)], [params:({$api['req']})]");
                 }
                 $pluginRes = Plugin::hook('cml.before_run_api_test_one_api', $api);
                 is_null($pluginRes) || $api = $pluginRes;
@@ -55,7 +56,7 @@ class AutoTest
                 $res = Request::curl($apiUrl, $api['req'], [], 'raw');
                 $resArray = json_decode($res, true);
                 if (!$resArray || !in_array($resArray['code'], explode('+', $trueCode))) {
-                    throw new \InvalidArgumentException("api auto test failure!, [method:($method)], [params:({$api['req']})], [result:({$res})]");
+                    throw new InvalidArgumentException("api auto test failure!, [method:($method)], [params:({$api['req']})], [result:({$res})]");
                 }
             });
         });

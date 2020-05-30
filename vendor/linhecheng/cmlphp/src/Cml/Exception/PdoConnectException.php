@@ -9,11 +9,13 @@
 
 namespace Cml\Exception;
 
+use RuntimeException;
+
 /**
  * Pdo连接失败异常类
  *
  * @package Cml\Exception
  */
-class PdoConnectException extends \RuntimeException
+class PdoConnectException extends RuntimeException
 {
 }

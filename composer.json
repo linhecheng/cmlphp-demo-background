@@ -1,7 +1,7 @@
 {
     "require": {
-        "php": ">=5.4.0",
-        "linhecheng/cmlphp": "dev-dev"
+        "php": ">=7.0",
+        "linhecheng/cmlphp": "dev-master"
     },
     "autoload": {
         "psr-4": {

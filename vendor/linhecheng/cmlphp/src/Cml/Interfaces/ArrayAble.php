@@ -2,18 +2,19 @@
 /* * *********************************************************
  * [cmlphp] (C)2012 - 3000 http://cmlphp.com
  * @Author  linhecheng<linhechengbush@live.com>
- * @Date: 16-8-21 下午19:25
+ * @Date: 16-9-6 下午3:07
  * @version  @see \Cml\Cml::VERSION
- * cmlphp框架 CacheConnectFailException
+ * cmlphp框架 ArrayAble接口
  * *********************************************************** */
 
-namespace Cml\Exception;
+namespace Cml\Interfaces;
 
 /**
- * php扩展未安装异常类
+ * ArrayAble 接口
  *
- * @package Cml\Exception
+ * @package Cml\Interfaces
  */
-class PhpExtendNotInstall extends \RuntimeException
+interface ArrayAble
 {
+    public function toArray();
 }

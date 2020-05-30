@@ -9,10 +9,15 @@
 
 namespace Cml\Service;
 
+use Closure;
 use Cml\Cml;
 use Cml\Config;
+use Cml\Interfaces\Middleware;
 use Cml\Lang;
 use Cml\Interfaces\Route as RouteInterface;
+use InvalidArgumentException;
+use Cml\Route as RouteFace;
+use function Cml\dd;
 
 /**
  * Url解析类,负责路由及Url的解析
@@ -22,11 +27,11 @@ use Cml\Interfaces\Route as RouteInterface;
 class Route implements RouteInterface
 {
     /**
-     * 是否启用分组
+     * 分组信息
      *
-     * @var false
+     * @var array
      */
-    private static $group = false;
+    private $group = [];
 
     /**
      * 路由类型为GET请求
@@ -95,18 +100,26 @@ class Route implements RouteInterface
      *
      * @var array
      */
-    private static $rules = [];
+    private $rules = [];
 
     /**
-     * 解析得到的请求信息 含应用名、控制器、操作
+     * 路由使用的中间件
      *
      * @var array
      */
-    private static $urlParams = [
+    private $middleware = [];
+
+    /**
+     * 解析得到的请求信息 含应用名、控制器、操作、路由绑定的中间件
+     *
+     * @var array
+     */
+    private $urlParams = [
         'path' => '',
         'controller' => '',
         'action' => '',
         'root' => '',
+        'middleware' => []
     ];
 
     /**
@@ -114,7 +127,7 @@ class Route implements RouteInterface
      *
      * @var string
      */
-    private static $matchRoute = 'url_to_action';
+    private $matchRoute = 'url_to_action';
 
     /**
      * 修改解析得到的请求信息 含应用名、控制器、操作
@@ -127,9 +140,9 @@ class Route implements RouteInterface
     public function setUrlParams($key = 'path', $val = '')
     {
         if (is_array($key)) {
-            self::$urlParams = array_merge(self::$urlParams, $key);
+            $this->urlParams = array_merge($this->urlParams, $key);
         } else {
-            self::$urlParams[$key] = $val;
+            $this->urlParams[$key] = $val;
         }
     }
 
@@ -140,7 +153,7 @@ class Route implements RouteInterface
      */
     public function parseUrl()
     {
-        \Cml\Route::parsePathInfo();
+        RouteFace::parsePathInfo();
 
         $path = '/';
 
@@ -150,26 +163,33 @@ class Route implements RouteInterface
             $subDir = '';
         }
         //定义项目根目录地址
-        self::$urlParams['root'] = $subDir . '/';
+        $this->urlParams['root'] = $subDir . '/';
 
-        $pathInfo = \Cml\Route::getPathInfo();
+        $pathInfo = RouteFace::getPathInfo();
 
         //检测路由
-        if (self::$rules) {//配置了路由，所有请求通过路由处理
-            $isRoute = self::isRoute($pathInfo);
+        if ($this->rules) {//配置了路由，所有请求通过路由处理
+            $isRoute = $this->isRoute($pathInfo);
             if ($isRoute[0]) {//匹配路由成功
-                if (is_array($isRoute['route'])) {
-                    self::$urlParams['action'] = $isRoute['route'][2];
-                    self::$urlParams['controller'] = $isRoute['route'][1];
-                    $path = self::$urlParams['path'] = $isRoute['route'][0];
-                    if (is_callable($isRoute['route'][3])) {
-                        $isRoute['route'][3]();
+                $isRoute = $isRoute['route'];
+
+                if (class_exists($isRoute[0])) {
+                    $this->urlParams['action'] = $isRoute[1];
+                    $isRoute[0] = explode(Cml::getApplicationDir('app_controller_path_name') . '/', str_replace('\\', '/', $isRoute[0]));
+                    $path = trim($isRoute[0][0], '/');
+                    $this->urlParams['controller'] = mb_substr(trim($isRoute[0][1], '/'), 0, -(mb_strlen(Config::get('controller_suffix'))));
+                } else if (is_array($isRoute)) {
+                    $this->urlParams['action'] = $isRoute[2];
+                    $this->urlParams['controller'] = $isRoute[1];
+                    $path = $isRoute[0];
+                    if (isset($isRoute[3]) && $isRoute[3] instanceof Closure) {
+                        $isRoute[3]();
                     }
                 } else {
-                    $routeArr = explode('/', $isRoute['route']);
+                    $routeArr = explode('/', $isRoute);
                     $isRoute = null;
-                    self::$urlParams['action'] = array_pop($routeArr);
-                    self::$urlParams['controller'] = ucfirst(array_pop($routeArr));
+                    $this->urlParams['action'] = array_pop($routeArr);
+                    $this->urlParams['controller'] = ucfirst(array_pop($routeArr));
                     $controllerPath = '';
 
                     $routeAppHierarchy = Config::get('route_app_hierarchy', 1);
@@ -181,14 +201,14 @@ class Route implements RouteInterface
                             $controllerPath .= $dir . '/';
                         }
                     }
-                    self::$urlParams['controller'] = $controllerPath . self::$urlParams['controller'];
+                    $this->urlParams['controller'] = $controllerPath . $this->urlParams['controller'];
                     unset($routeArr);
                 }
             } else {
-                self::findAction($pathInfo, $path); //未匹配到路由 按文件名映射查找
+                $this->findAction($pathInfo, $path); //未匹配到路由 按文件名映射查找
             }
         } else {
-            self::findAction($pathInfo, $path);//未匹配到路由 按文件名映射查找
+            $this->findAction($pathInfo, $path);//未匹配到路由 按文件名映射查找
         }
 
         $pathInfo = array_values($pathInfo);
@@ -197,7 +217,7 @@ class Route implements RouteInterface
         }
 
         unset($pathInfo);
-        self::$urlParams['path'] = $path ? $path : '/';
+        $this->urlParams['path'] = $path ? $path : '/';
         unset($path);
         $_REQUEST = array_merge($_REQUEST, $_GET);
     }
@@ -213,7 +233,7 @@ class Route implements RouteInterface
     {
         empty($pathInfo) && $pathInfo[0] = '/';//网站根地址
         $isSuccess = [];
-        $route = self::$rules;
+        $route = $this->rules;
 
         $httpMethod = isset($_POST['_method']) ? strtoupper($_POST['_method']) : strtoupper($_SERVER['REQUEST_METHOD']);
 
@@ -297,16 +317,16 @@ class Route implements RouteInterface
                 }
             };
 
-            if (is_callable($route[$isSuccess[0]])) {
+            if ($route[$isSuccess[0]] instanceof Closure) {
                 $parseGet();
-                \Cml\Route::executeCallableRoute($route[$isSuccess[0]], substr($isSuccess[0], 1));
+                RouteFace::executeCallableRoute($route[$isSuccess[0]], substr($isSuccess[0], 1));
             }
 
             is_array($route[$isSuccess[0]]) || $route[$isSuccess[0]] = trim(str_replace('\\', '/', $route[$isSuccess[0]]), '/');
 
             //判断路由的正确性
             if (!is_array($route[$isSuccess[0]]) && count(explode('/', $route[$isSuccess[0]])) < 2) {
-                throw new \InvalidArgumentException(Lang::get('_ROUTE_PARAM_ERROR_', substr($isSuccess[0], 1)));
+                throw new InvalidArgumentException(Lang::get('_ROUTE_PARAM_ERROR_', substr($isSuccess[0], 1)));
             }
 
             $returnArr[0] = true;
@@ -314,13 +334,18 @@ class Route implements RouteInterface
             $parseGet();
 
             if (substr($isSuccess[0], 0, 1) == self::REST_ROUTE) {
-                $actions = explode('/', $route[$isSuccess[0]]);
-                $arrKey = count($actions) - 1;
-                $actions[$arrKey] = strtolower($httpMethod) . ucfirst($actions[$arrKey]);
-                $route[$isSuccess[0]] = implode('/', $actions);
+                if (class_exists($route[$isSuccess[0]][0])) {
+                    $route[$isSuccess[0]][1] = strtolower($httpMethod) . ucfirst($route[$isSuccess[0]][1]);
+                } else {
+                    $actions = explode('/', $route[$isSuccess[0]]);
+                    $arrKey = count($actions) - 1;
+                    $actions[$arrKey] = strtolower($httpMethod) . ucfirst($actions[$arrKey]);
+                    $route[$isSuccess[0]] = implode('/', $actions);
+                }
             }
 
-            self::$matchRoute = substr($isSuccess[0], 1);
+            $this->matchRoute = substr($isSuccess[0], 1);
+            $this->urlParams['middleware'] = $this->middleware[$isSuccess[0]] ?? [];
             $returnArr['route'] = $route[$isSuccess[0]];
         }
         return $returnArr;
@@ -333,9 +358,9 @@ class Route implements RouteInterface
      */
     public function getSubDirName()
     {
-        substr(self::$urlParams['root'], -1) != '/' && self::$urlParams['root'] .= '/';
-        substr(self::$urlParams['root'], 0, 1) != '/' && self::$urlParams['root'] = '/' . self::$urlParams['root'];
-        return self::$urlParams['root'];
+        substr($this->urlParams['root'], -1) != '/' && $this->urlParams['root'] .= '/';
+        substr($this->urlParams['root'], 0, 1) != '/' && $this->urlParams['root'] = '/' . $this->urlParams['root'];
+        return $this->urlParams['root'];
     }
 
     /**
@@ -345,7 +370,7 @@ class Route implements RouteInterface
      */
     public function getAppName()
     {
-        return trim(self::$urlParams['path'], '\\/');
+        return trim($this->urlParams['path'], '\\/');
     }
 
     /**
@@ -355,7 +380,7 @@ class Route implements RouteInterface
      */
     public function getControllerName()
     {
-        return trim(self::$urlParams['controller'], '\\/');
+        return trim($this->urlParams['controller'], '\\/');
     }
 
     /**
@@ -365,7 +390,7 @@ class Route implements RouteInterface
      */
     public function getActionName()
     {
-        return trim(self::$urlParams['action'], '\\/');
+        return trim($this->urlParams['action'], '\\/');
     }
 
     /**
@@ -375,7 +400,7 @@ class Route implements RouteInterface
      */
     public function getFullPathNotContainSubDir()
     {
-        return self::getAppName() . '/' . self::getControllerName() . '/' . self::getActionName();
+        return $this->getAppName() . '/' . $this->getControllerName() . '/' . $this->getActionName();
     }
 
     /**
@@ -385,16 +410,26 @@ class Route implements RouteInterface
     public function getControllerAndAction()
     {
         //控制器所在路径
-        $appName = self::getAppName();
+        $appName = $this->getAppName();
         $className = $appName . ($appName ? '/' : '') . Cml::getApplicationDir('app_controller_path_name') .
-            '/' . self::getControllerName() . Config::get('controller_suffix');
+            '/' . $this->getControllerName() . Config::get('controller_suffix');
         $actionController = Cml::getApplicationDir('apps_path') . '/' . $className . '.php';
 
         if (is_file($actionController)) {
-            return ['class' => str_replace('/', '\\', $className), 'action' => self::getActionName(), 'route' => self::$matchRoute];
+            return ['class' => str_replace('/', '\\', $className), 'action' => $this->getActionName(), 'route' => $this->matchRoute];
         } else {
             return false;
         }
+    }
+
+    /**
+     * 获取中间件
+     *
+     * @return Middleware[]
+     */
+    public function getMiddleware()
+    {
+        return $this->urlParams['middleware'];
     }
 
     /**
@@ -420,7 +455,7 @@ class Route implements RouteInterface
                 . $controllerPath . $controllerName . $controllerSuffix . '.php';
 
             if ($i >= $routeAppHierarchy && is_file($controller)) {
-                self::$urlParams['controller'] = $controllerPath . $controllerName;
+                $this->urlParams['controller'] = $controllerPath . $controllerName;
                 break;
             } else {
                 if ($i++ < $routeAppHierarchy) {
@@ -430,8 +465,26 @@ class Route implements RouteInterface
                 }
             }
         }
-        empty(self::$urlParams['controller']) && self::$urlParams['controller'] = $controllerName;//用于404的时候挂载插件用
-        self::$urlParams['action'] = array_shift($pathInfo);
+        empty($this->urlParams['controller']) && $this->urlParams['controller'] = $controllerName;//用于404的时候挂载插件用
+        $this->urlParams['action'] = array_shift($pathInfo);
+    }
+
+    /**
+     * 添加路由公用方法
+     *
+     * @param string $requestMethod http方法
+     * @param string $pattern 路由规则
+     * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
+     *
+     * @return $this
+     */
+    private function addRoute($requestMethod, $pattern, $action, $middleware = [])
+    {
+        $pattern = $this->patternFactory($pattern, $requestMethod);
+        $this->rules[$pattern] = $action;
+        $this->middleware[$pattern] = array_merge($this->middleware[$pattern] ?? [], $middleware);
+        return $this;
     }
 
     /**
@@ -439,13 +492,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function get($pattern, $action)
+    public function get($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REQUEST_METHOD_GET . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REQUEST_METHOD_GET, $pattern, $action, $middleware);
     }
 
     /**
@@ -453,13 +506,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function post($pattern, $action)
+    public function post($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REQUEST_METHOD_POST . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REQUEST_METHOD_POST, $pattern, $action, $middleware);
     }
 
     /**
@@ -467,13 +520,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function put($pattern, $action)
+    public function put($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REQUEST_METHOD_PUT . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REQUEST_METHOD_PUT, $pattern, $action, $middleware);
     }
 
     /**
@@ -481,13 +534,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function patch($pattern, $action)
+    public function patch($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REQUEST_METHOD_PATCH . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REQUEST_METHOD_PATCH, $pattern, $action, $middleware);
     }
 
     /**
@@ -495,13 +548,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function delete($pattern, $action)
+    public function delete($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REQUEST_METHOD_DELETE . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REQUEST_METHOD_DELETE, $pattern, $action, $middleware);
     }
 
     /**
@@ -509,13 +562,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function options($pattern, $action)
+    public function options($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REQUEST_METHOD_OPTIONS . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REQUEST_METHOD_OPTIONS, $pattern, $action, $middleware);
     }
 
     /**
@@ -523,13 +576,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function any($pattern, $action)
+    public function any($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REQUEST_METHOD_ANY . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REQUEST_METHOD_ANY, $pattern, $action, $middleware);
     }
 
     /**
@@ -537,13 +590,13 @@ class Route implements RouteInterface
      *
      * @param string $pattern 路由规则
      * @param string|array $action 执行的操作
+     * @param array $middleware 使用的中间件
      *
      * @return $this
      */
-    public function rest($pattern, $action)
+    public function rest($pattern, $action, $middleware = [])
     {
-        self::$rules[self::REST_ROUTE . self::patternFactory($pattern)] = $action;
-        return $this;
+        return $this->addRoute(self::REST_ROUTE, $pattern, $action, $middleware);
     }
 
     /**
@@ -551,33 +604,40 @@ class Route implements RouteInterface
      *
      * @param string $namespace 分组名
      * @param callable $func 闭包
+     * @param array $middleware 使用的中间件
      */
-    public function group($namespace, callable $func)
+    public function group($namespace, callable $func, $middleware = [])
     {
         if (empty($namespace)) {
-            throw new \InvalidArgumentException(Lang::get('_NOT_ALLOW_EMPTY_', '$namespace'));
+            throw new InvalidArgumentException(Lang::get('_NOT_ALLOW_EMPTY_', '$namespace'));
         }
 
-        self::$group = trim($namespace, '/');
+        $this->group = [
+            'namespace' => trim($namespace, '/'),
+            'middleware' => $middleware
+        ];
 
         $func();
 
-        self::$group = false;
+        $this->group = null;
     }
 
     /**
      * 组装路由规则
      *
      * @param $pattern
+     * @param string $requestMethod http方法
      *
      * @return string
      */
-    private function patternFactory($pattern)
+    private function patternFactory($pattern, $requestMethod)
     {
-        if (self::$group) {
-            return self::$group . '/' . ltrim($pattern);
-        } else {
+        if ($this->group) {
+            $pattern = $requestMethod . $this->group['namespace'] . '/' . ltrim($pattern);
+            $this->middleware[$pattern] = $this->group['middleware'];
             return $pattern;
+        } else {
+            return $requestMethod . $pattern;
         }
     }
 }

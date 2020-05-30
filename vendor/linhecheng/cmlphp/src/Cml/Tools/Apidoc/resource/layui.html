@@ -53,7 +53,7 @@
                     <a href="#{{echo str_replace('.', '_', $version);}}">{{$version}}版本接口</a>
                     <dl class="layui-nav-child">
                         {{loop $item $method $api }}
-                            <dd><a href="#{{echo str_replace('.', '_', $version)."_{$method}";}}" title="{{$method}} {{$api['desc']}}">{{$method}} {{$api['desc']}}</a></dd>
+                            <dd><a href="#{{echo str_replace('.', '_', $version)."_{$method}";}}" title="{{$method}} {{$api['desc']}}">{{$api['desc']}} {{$method}}</a></dd>
                         {{/loop}}
                     </dl>
                 </li>

@@ -9,6 +9,8 @@
 
 namespace Cml;
 
+use Cml\Lock\Base;
+
 /**
  * Lock处理类提供统一的锁机制
  *
@@ -21,11 +23,11 @@ class Lock
      *
      * @param string|null $useCache 使用的锁的配置
      *
-     * @return \Cml\Lock\Redis | \Cml\Lock\Memcache | \Cml\Lock\File | false
+     * @return Base
      */
     public static function getLocker($useCache = null)
     {
-        return Cml::getContainer()->make('cml_lock', $useCache);
+        return Cml::getContainer()->make('cml_lock', [$useCache]);
     }
 
     /**
@@ -33,7 +35,7 @@ class Lock
      *
      * @param int $expire
      *
-     * @return \Cml\Lock\Redis | \Cml\Lock\Memcache | \Cml\Lock\File
+     * @return Base
      */
     public static function setExpire($expire = 100)
     {

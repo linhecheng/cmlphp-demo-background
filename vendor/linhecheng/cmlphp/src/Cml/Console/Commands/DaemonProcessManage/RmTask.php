@@ -11,6 +11,7 @@ namespace Cml\Console\Commands\DaemonProcessManage;
 
 use Cml\Console\Command;
 use Cml\Tools\Daemon\ProcessManage;
+use InvalidArgumentException;
 
 /**
  * 删除一个后台任务
@@ -34,18 +35,18 @@ class RmTask extends Command
      * @param array $args 传递给命令的参数
      * @param array $options 传递给命令的选项
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function execute(array $args, array $options = [])
     {
         if (!isset($args[0])) {
-            throw new \InvalidArgumentException('arg action must be input');
+            throw new InvalidArgumentException('arg action must be input');
         }
         $action = explode('::', $args[0]);
         if (!class_exists($action[0])) {
-            throw new \InvalidArgumentException('action not not found!');
+            throw new InvalidArgumentException('action not not found!');
         }
 
-        ProcessManage::rmTask($action);
+        ProcessManage::rmTask($args[0]);
     }
 }

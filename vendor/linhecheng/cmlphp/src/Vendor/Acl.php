@@ -14,6 +14,10 @@ use Cml\Config;
 use Cml\Encry;
 use Cml\Http\Cookie;
 use Cml\Model;
+use Exception;
+use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionMethod;
 
 /**
  * 权限控制类
@@ -206,7 +210,7 @@ class Acl
         if (isset(self::$tables[$type])) {
             return self::$tables[$type];
         } else {
-            throw new \InvalidArgumentException($type);
+            throw new InvalidArgumentException($type);
         }
     }
 
@@ -271,16 +275,16 @@ class Acl
                         'id' => $user['id'],
                         'username' => $user['username'],
                         'nickname' => $user['nickname'],
-                        'groupid' => array_values(array_filter(explode(self::$multiGroupDeper, trim($user['groupid'], self::$multiGroupDeper)), function($v) {
+                        'groupid' => array_values(array_filter(explode(self::$multiGroupDeper, trim($user['groupid'], self::$multiGroupDeper)), function ($v) {
                             return !empty($v);
                         })),
                         'from_type' => $user['from_type']
                     ];
 
-                    $authUser['groupname'] = Model::getInstance(self::$tables['groups'])->mapDbAndTable()
+                    $authUser['groupname'] = Model::getInstance(self::$tables['groups'])
                         ->whereIn('id', $authUser['groupid'])
                         ->where('status', 1)
-                        ->plunk('name');
+                        ->pluck('name');
                     $authUser['groupname'] = implode(',', $authUser['groupname']);
                     //有操作登录超时时间重新设置为expire时间
                     if (self::$authUser['expire'] > 0 && (
@@ -306,9 +310,9 @@ class Acl
      * 如当前访问的方法为web/User/list则传入new \web\Controller\User()获得的实例。最常用的是在基础控制器的init方法或构造方法里传入$this。
      * 传入字符串如web/User/list时会自动 new \web\Controller\User()获取实例用于判断
      *
-     * @throws \Exception
-     *
      * @return bool
+     *
+     * @throws Exception
      */
     public static function checkAcl($controller)
     {
@@ -350,8 +354,8 @@ class Acl
 
         if (is_object($controller)) {
             //判断是否有标识 @noacl 不检查权限
-            $reflection = new \ReflectionClass($controller);
-            $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+            $reflection = new ReflectionClass($controller);
+            $methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
             foreach ($methods as $method) {
                 if ($method->name == $checkAction) {
                     $annotation = $method->getDocComment();
@@ -389,14 +393,26 @@ class Acl
         $acl = Model::getInstance()->table([self::$tables['access'] => 'a'])
             ->join([self::$tables['menus'] => 'm'], 'a.menuid=m.id')
             ->_and(function ($model) use ($authInfo) {
+                /**
+                 * @var Model $model
+                 */
                 $model->whereIn('a.groupid', $authInfo['groupid'])
                     ->_or()
                     ->where('a.userid', $authInfo['id']);
             })->when(self::$otherAclParams, function ($model) {
+                /**
+                 * @var Model $model
+                 */
                 $model->where('m.params', self::$otherAclParams);
             })->when(is_array($checkUrl), function ($model) use ($checkUrl) {
+                /**
+                 * @var Model $model
+                 */
                 $model->whereIn('m.url', $checkUrl);
             }, function ($model) use ($checkUrl) {
+                /**
+                 * @var Model $model
+                 */
                 $model->where('m.url', $checkUrl);
             })->count('1');
         return $acl > 0;
@@ -419,10 +435,16 @@ class Acl
         }
 
         $result = Model::getInstance()->table([self::$tables['menus'] => 'm'])
-            ->columns(['distinct m.id', 'm.pid', 'm.title', 'm.url', 'm.params' . ($columns ? " ,{$columns}" : '')])
+            ->columns(['distinct m.id, m.sort', 'm.pid', 'm.title', 'm.url', 'm.params' . ($columns ? " ,{$columns}" : '')])
             ->when(!self::isSuperUser(), function ($model) use ($authInfo) {//当前登录用户是否为超级管理员
+                /**
+                 * @var Model $model
+                 */
                 $model->join([self::$tables['access'] => 'a'], 'a.menuid=m.id')
                     ->_and(function ($model) use ($authInfo) {
+                        /**
+                         * @var Model $model
+                         */
                         $model->whereIn('a.groupid', $authInfo['groupid'])
                             ->_or()
                             ->where('a.userid', $authInfo['id']);

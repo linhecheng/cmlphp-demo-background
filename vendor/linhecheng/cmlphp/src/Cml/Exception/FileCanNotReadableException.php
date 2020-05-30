@@ -9,11 +9,13 @@
 
 namespace Cml\Exception;
 
+use RuntimeException;
+
 /**
  * 文件无法读取异常类
  *
  * @package Cml\Exception
  */
-class FileCanNotReadableException extends \RuntimeException
+class FileCanNotReadableException extends RuntimeException
 {
 }

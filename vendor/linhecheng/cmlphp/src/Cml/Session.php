@@ -6,6 +6,9 @@
  * *********************************************************** */
 namespace Cml;
 
+use Cml\Interfaces\Cache;
+use Cml\Interfaces\Db;
+
 /**
  * Session保存位置处理类。封装了Session入库/Cache的逻辑处理
  * 采用Mysql存储时需要建数据表,语句如下:
@@ -28,9 +31,7 @@ class Session
     private $lifeTime;
 
     /**
-     * \Cml\Db\Mysql\Pdo || Cml\Cache\File
-     *
-     * @var \Cml\Db\MySql\Pdo || \Cml\Cache\File $handler
+     * @var Db |Cache $handler
      */
     private $handler;
 
@@ -159,9 +160,8 @@ class Session
             $lifeTime || $lifeTime = $this->lifeTime;
             $this->handler->whereLt('ctime', Cml::$nowTime - $lifeTime)
                 ->delete(Config::get('session_user_loc_table'), true, Config::get('session_user_loc_tableprefix'));
-        } else {
-            //cache 本身会回收
         }
+        //else //cache 本身会回收
         return true;
     }
 }

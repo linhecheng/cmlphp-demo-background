@@ -34,7 +34,7 @@ class Blade extends Base
      *
      * @param string $templateFile 模板文件名
      *
-     * @return string
+     * @return array
      */
     private function initBaseDir($templateFile)
     {

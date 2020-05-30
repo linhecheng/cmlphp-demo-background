@@ -6,6 +6,8 @@
  * @version  @see \Cml\Cml::VERSION
  * cml英文语言包
  * *********************************************************** */
+//线上模式出错玩家只会看到 _CML_ERROR_ 这个提示语，框架核心语言包只会在开发模式下被开发人员看到，后续功能没有再翻译的必要，不再追加
+
 return [
     //  core
     '_CONTROLLER_NOT_FOUND_' => 'Sorry! Your access module does not exist, please check the routing or access to the address is wrong!',

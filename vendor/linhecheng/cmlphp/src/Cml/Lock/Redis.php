@@ -29,20 +29,20 @@ class Redis extends Base
     protected function execLock($lock, $wouldBlock = false)
     {
         $inst = Model::getInstance()->cache($this->useCache)->getInstance();
+
         if (
             isset($this->lockCache[$lock])
-            && $this->lockCache[$lock] == $inst->get($lock)
+            && $inst->eval('if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("EXPIRE", KEYS[1], ' . $this->expire . ') else return 0 end'
+                , [$lock, $this->lockCache[$lock]], 1)
         ) {
             return true;
         }
         $unique = uniqid('', true);
 
-        if ($inst->set(
-            $lock,
-            $unique,
-            ['nx', 'ex' => $this->expire]
-        )
-        ) {
+        $script = 'if redis.call("SET", KEYS[1], ARGV[1], "nx", "ex", ARGV[2])  then return 1 else return 0 end';
+        // eval "return redis.call('SET', KEYS[1], 'bar', 'NX', 'EX', 100)" 1 foo2
+
+        if ($inst->eval($script, [$lock, $unique, $this->expire], 1)) {
             $this->lockCache[$lock] = $unique;
             return true;
         }
@@ -55,11 +55,7 @@ class Redis extends Base
         //堵塞模式
         do {
             usleep(200);
-        } while (!$inst->set(
-            $lock,
-            $unique,
-            ['nx', 'ex' => $this->expire]
-        ));
+        } while (!$inst->eval($script, [$lock, $unique, $this->expire], 1));
 
         $this->lockCache[$lock] = $unique;
         return true;
@@ -77,7 +73,7 @@ class Redis extends Base
         $script = 'if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end';
         $res = Model::getInstance()->cache($this->useCache)->getInstance()->eval($script, [$lock, $this->lockCache[$lock]], 1);
 
-        //Model::getInstance()->cache($this->useCache)->getInstance()->delete($key);
+        //Model::getInstance()->cache($this->useCache)->getInstance()->delete($lock);
         $this->lockCache[$lock] = null;//防止gc延迟,判断有误
         unset($this->lockCache[$lock]);
         return $res > 0;

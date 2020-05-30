@@ -9,6 +9,7 @@
 namespace Cml\Console\Component;
 
 use Cml\Console\IO\Output;
+use RuntimeException;
 
 /**
  * 命令行工具-对话框组件
@@ -86,7 +87,7 @@ class Dialog
             shell_exec(sprintf('stty %s', $sttyMode));
 
             if (false === $value) {
-                throw new \RuntimeException('Aborted');
+                throw new RuntimeException('Aborted');
             }
 
             $value = trim($value);
@@ -102,7 +103,7 @@ class Dialog
             return $value;
         }
 
-        throw new \RuntimeException('Unable to hide the response.');
+        throw new RuntimeException('Unable to hide the response.');
     }
 
     /**

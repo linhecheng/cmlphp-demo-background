@@ -1,11 +1,16 @@
-<?php namespace Cml;
-    /* * *********************************************************
-     * [cmlphp] (C)2012 - 3000 http://cmlphp.com
-     * @Author  linhecheng<linhechengbush@live.com>
-     * @Date: 16-02-04 下午20:11
-     * @version  @see \Cml\Cml::VERSION
-     * cmlphp框架 队列调度中心
-     * *********************************************************** */
+<?php
+/* * *********************************************************
+ * [cmlphp] (C)2012 - 3000 http://cmlphp.com
+ * @Author  linhecheng<linhechengbush@live.com>
+ * @Date: 16-02-04 下午20:11
+ * @version  @see \Cml\Cml::VERSION
+ * cmlphp框架 队列调度中心
+ * *********************************************************** */
+
+namespace Cml;
+
+
+use Cml\Queue\Base;
 
 /**
  * 队列调度中心,封装的队列的操作
@@ -19,11 +24,11 @@ class Queue
      *
      * @param mixed $useCache 如果该锁服务使用的是cache，则这边可传配置文件中配置的cache的key
      *
-     * @return \Cml\Queue\Base
+     * @return Base
      */
     public static function getQueue($useCache = false)
     {
-        return Cml::getContainer()->make('cml_queue', $useCache);
+        return Cml::getContainer()->make('cml_queue', [$useCache]);
     }
 
     /**

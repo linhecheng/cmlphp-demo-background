@@ -12,10 +12,9 @@
 ##### 初始用户名密码  admin 123456
 ##### 为了方便搭建demo cache驱动设置为File。建议改成Redis
 
-##### 框架只要php5.4+版本即可运行，`public/index.php` 入口文件中使用了php5.5的语法`::class`用来获取类名。如果php版本< 5.5直接把`xxx::class`改成相应的字符串即可
-> 如：\Cml\ErrorOrException::class直接改成'\Cml\ErrorOrException'
 
-####插件勾子
+
+#### 插件勾子
 ```php
 admin_login_plugin。用于挂载第三方登录。如:
 //qq登录

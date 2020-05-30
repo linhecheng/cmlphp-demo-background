@@ -79,6 +79,14 @@ interface Route
      */
     public function getControllerAndAction();
 
+
+    /**
+     * 获取中间件
+     *
+     * @return Middleware[]
+     */
+    public function getMiddleware();
+
     /**
      * 增加get访问方式路由
      *

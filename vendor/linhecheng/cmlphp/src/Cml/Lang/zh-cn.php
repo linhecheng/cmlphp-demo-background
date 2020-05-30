@@ -6,6 +6,8 @@
  * @version  @see \Cml\Cml::VERSION
  * cml简体中文语言包
  * *********************************************************** */
+
+//线上模式出错玩家只会看到 _CML_ERROR_ 这个提示语，框架核心语言包只会在开发模式下被开发人员看到，后续功能没有再翻译的必要，不再追加
 return [
     //  核心
     '_CONTROLLER_NOT_FOUND_' => '对不起!你访问的模块不存在,请检查路由或访问地址是否有误！',
@@ -42,5 +44,5 @@ return [
     '_SYSTEM_INFORMATION_' => '系统信息',
     '_SQL_STATEMENT_' => 'SQL语句',
     '_CONTAINER_MAKE_PARAMS_ERROR_' => '要解析的服务 %s 不存在，请先绑定!',
-    '_PARAM_ERROR_' =>'参数[%s]必须为%s'
+    '_PARAM_ERROR_' =>'参数[%s]必须为%s',
 ];
