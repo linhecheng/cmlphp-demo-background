@@ -409,34 +409,41 @@ abstract class Base implements Db
      * 格式化查询字段
      *
      * @param string $column
+     * @param bool $isSet 是否为写入
      *
      * @return string
      */
-    protected function formatColumnKey($column)
+    protected function formatColumnKey($column, $isSet = false)
     {
         if ($this->haveMysqlFunction($column)) {
             return $column;
         }
-        return implode(',', array_map(function ($col) {
-            return implode('.', array_map(function ($field) {
-                return implode(' ', array_map(function ($item) {
+        return implode(',', array_map(function ($col) use ($isSet) {
+            return implode('.', array_map(function ($field) use ($isSet) {
+                return implode(' ', array_map(function ($item) use ($isSet) {
                     $item = trim(trim($item, '`'));
+                    if (is_numeric($item)) {
+                        return $item;
+                    }
                     switch (strtoupper($item)) {
                         case '*':
                             return '*';
                         case 'DISTINCT':
-                        case 'ASC':
-                        case 'DESC':
+                        //   case 'ASC':
+                        //   case 'DESC':
                         case 'AS':
-                        case 'GROUP':
-                        case 'ORDER':
-                        case 'HAVING':
+                        //    case 'GROUP':
+                        //    case 'ORDER':
+                        //    case 'HAVING':
                         case 'AND':
                         case 'OR':
                         case 'IS':
                         case 'NOT':
                         case 'NULL':
                         case '':
+                            if ($isSet) {
+                                return "`{$item}`";
+                            }
                             return $item;
                         default:
                             return "`{$item}`";
@@ -711,7 +718,7 @@ abstract class Base implements Db
         $s = $p = '';
         $params = [];
         foreach ($arr as $k => $v) {
-            $k = $this->formatColumnKey($k);
+            $k = $this->formatColumnKey($k, true);
             if (is_array($v)) { //自增或自减
                 switch (key($v)) {
                     case '+':
@@ -734,13 +741,13 @@ abstract class Base implements Db
                         $p = "{$k} = {$func}(" . implode($funcParams, ',') . ')';
                         break;
                     case 'column':
-                        $p = "{$k} = " . $this->formatColumnKey(current($v));
+                        $p = "{$k} = " . $this->formatColumnKey(current($v), true);
                         break;
                     case 'raw':
                         $p = "{$k} = " . addslashes(current($v));//flags = (flags | 2) ^ 3
                         break;
                     default ://计算类型
-                        $conKey = $this->formatColumnKey(key($v));
+                        $conKey = $this->formatColumnKey(key($v), true);
                         if (!in_array(key(current($v)), ['+', '-', '*', '/', '%', '^', '&', '|', '<<', '>>', '~'])) {
                             throw new InvalidArgumentException(Lang::get('_PARSE_UPDATE_SQL_PARAMS_ERROR_'));
                         }
@@ -748,7 +755,7 @@ abstract class Base implements Db
                         break;
                 }
             } else {
-                $p = $this->formatColumnKey($k) . "= %s";
+                $p = $this->formatColumnKey($k, true) . "= %s";
                 $params[] = $v;
             }
 
@@ -802,6 +809,7 @@ abstract class Base implements Db
             return '';
         }
 
+        $table = trim($table, '`');
         $version = Model::getInstance()->cache()->get($this->conf['mark'] . '_db_cache_version_' . $table);
         if (!$version) {
             $version = microtime(true);
@@ -820,7 +828,7 @@ abstract class Base implements Db
         if (!$this->openCache) {
             return;
         }
-
+        $table = trim($table, '`');
         $isOpenEmergencyMode = Config::get('emergency_mode_not_real_time_refresh_mysql_query_cache');
         if ($isOpenEmergencyMode !== false && $isOpenEmergencyMode > 0) {//开启了紧急模式
             $expireTime = Model::getInstance()->cache()->get("emergency_mode_not_real_time_refresh_mysql_query_cache_{$table}");

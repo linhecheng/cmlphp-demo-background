@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/linhecheng/cmlphp.git",
-                "reference": "a245a0dbe50c46b6fc4e7e60a28523617ea1e69e"
+                "reference": "4db70b069ec6748cc97720f71b4afcaf834baf67"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/linhecheng/cmlphp/zipball/a245a0dbe50c46b6fc4e7e60a28523617ea1e69e",
-                "reference": "a245a0dbe50c46b6fc4e7e60a28523617ea1e69e",
+                "url": "https://api.github.com/repos/linhecheng/cmlphp/zipball/4db70b069ec6748cc97720f71b4afcaf834baf67",
+                "reference": "4db70b069ec6748cc97720f71b4afcaf834baf67",
                 "shasum": "",
                 "mirrors": [
                     {
@@ -58,7 +58,7 @@
             "keywords": [
                 "cmlphp"
             ],
-            "time": "2020-05-30T14:53:46+00:00"
+            "time": "2020-06-06T10:52:44+00:00"
         }
     ],
     "packages-dev": [],

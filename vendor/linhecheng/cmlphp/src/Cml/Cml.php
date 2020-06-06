@@ -27,7 +27,7 @@ class Cml
     /**
      * 版本
      */
-    const VERSION = 'v2.9.0';
+    const VERSION = 'v2.9.1';
 
     /**
      * 执行app/只是初始化环境
@@ -467,7 +467,6 @@ class Cml
     public static function cmlStop($contentType = null)
     {
         if (!$contentType || false !== stripos($contentType, 'text/html') || false !== stripos($contentType, 'text/plain')) {
-
             //输出Debug模式的信息
             if (self::$debug) {
                 header('Content-Type:text/html; charset=' . Config::get('default_charset'));

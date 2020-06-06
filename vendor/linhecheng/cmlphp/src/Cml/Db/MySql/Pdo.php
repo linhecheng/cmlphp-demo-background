@@ -138,6 +138,7 @@ class Pdo extends Base
             Config::get('db_fields_cache') && $info = simpleFileCache($this->conf['master']['dbname'] . '.' . $table);
             if (!$info || Cml::$debug) {
                 $this->currentQueryIsMaster = false;
+                $table = $this->formatColumnKey($table);
                 $stmt = $this->prepare("SHOW COLUMNS FROM $table", $this->rlink, false);
                 $this->execute($stmt, false);
                 $info = [];
@@ -232,7 +233,7 @@ class Pdo extends Base
     public function insert($table, $data, $tablePrefix = null)
     {
         is_null($tablePrefix) && $tablePrefix = $this->tablePrefix;
-        $tableName = $tablePrefix . $table;
+        $tableName = $this->formatColumnKey($tablePrefix . $table);
         if (is_array($data)) {
             $s = $this->arrToCondition($data);
             $this->currentQueryIsMaster = true;
@@ -263,7 +264,7 @@ class Pdo extends Base
     public function insertMulti($table, $field, $data, $tablePrefix = null, $openTransAction = true)
     {
         is_null($tablePrefix) && $tablePrefix = $this->tablePrefix;
-        $tableName = $tablePrefix . $table;
+        $tableName = $this->formatColumnKey($tablePrefix . $table);
         if (is_array($data) && is_array($field)) {
             $field = array_flip(array_values($field));
             foreach ($field as $key => $val) {
@@ -310,7 +311,7 @@ class Pdo extends Base
     public function replaceInto($table, array $data, $tablePrefix = null)
     {
         is_null($tablePrefix) && $tablePrefix = $this->tablePrefix;
-        $tableName = $tablePrefix . $table;
+        $tableName = $this->formatColumnKey($tablePrefix . $table);
         if (is_array($data)) {
             $s = $this->arrToCondition($data);
             $this->currentQueryIsMaster = true;
@@ -348,6 +349,7 @@ class Pdo extends Base
             $up = $this->arrToCondition($up);
             $s = $this->arrToCondition($data);
             $this->currentQueryIsMaster = true;
+            $tableName = $this->formatColumnKey($tableName);
             $stmt = $this->prepare("INSERT INTO {$tableName} SET {$s} ON DUPLICATE KEY UPDATE {$up}", $this->wlink);
             $this->execute($stmt);
 
@@ -375,7 +377,7 @@ class Pdo extends Base
     public function replaceMulti($table, $field, $data, $tablePrefix = null, $openTransAction = true)
     {
         is_null($tablePrefix) && $tablePrefix = $this->tablePrefix;
-        $tableName = $tablePrefix . $table;
+        $tableName = $this->formatColumnKey($tablePrefix . $table);
         if (is_array($data) && is_array($field)) {
             $field = array_flip(array_values($field));
             foreach ($field as $key => $val) {
@@ -453,6 +455,7 @@ class Pdo extends Base
             $limit = explode(',', $this->sql['limit']);
             $limit = 'LIMIT ' . $limit[1];
         }
+        $tableName = $this->formatColumnKey($tableName);
         $stmt = $this->prepare("UPDATE {$tableName} SET {$s} {$whereCondition} {$this->sql['orderBy']} {$limit}", $this->wlink);
         $this->execute($stmt);
 
@@ -502,6 +505,7 @@ class Pdo extends Base
             $limit = explode(',', $this->sql['limit']);
             $limit = 'LIMIT ' . $limit[1];
         }
+        $tableName = $this->formatColumnKey($tableName);
         $stmt = $this->prepare("DELETE FROM {$tableName} {$whereCondition} {$this->sql['orderBy']} {$limit}", $this->wlink);
         $this->execute($stmt);
 
@@ -534,6 +538,7 @@ class Pdo extends Base
     {
         $tableName = $this->tablePrefix . $tableName;
         $this->currentQueryIsMaster = true;
+        $tableName = $this->formatColumnKey($tableName);
         $stmt = $this->prepare("TRUNCATE {$tableName}");
 
         $this->setCacheVer($tableName);

@@ -480,7 +480,14 @@ class Acl
         if (!$authInfo) {//登录超时
             return false;
         }
-        $admin = Config::get('administratorid');
-        return is_array($admin) ? in_array($authInfo['id'], $admin) : ($authInfo['id'] === $admin);
+        $admin = (array)Config::get('administratorid');
+        $isAdmin = in_array($authInfo['id'], $admin);
+
+        if (!$isAdmin) {
+            $admin = (array)Config::get('administratorusername');
+            $isAdmin = in_array($authInfo['username'], $admin);
+        }
+
+        return $isAdmin;
     }
 }

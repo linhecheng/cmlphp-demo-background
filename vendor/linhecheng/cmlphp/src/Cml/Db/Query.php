@@ -455,7 +455,7 @@ trait Query
     {
         $return = stripos($column, '(') !== false && stripos($column, ')') !== false;
         $return || $return = preg_match('#(\s+)(CASE|WHEN|END|FROM)(\s+)#ims', $column);
-        if ($return && preg_match('#(SELECT|UPDATE|DELETE/CREATE/INSERT|UNION|OUTFILE|INFILE)(.+)#ims', $column, $match)) {
+        if ($return && preg_match('#(SELECT|UPDATE|DELETE/CREATE/INSERT|UNION|OUTFILE|INFILE)(\s+)#ims', $column, $match)) {
             throw new InvalidArgumentException('MySql Function Not Allow Use ' . $match[1]);
         }
         return $return;
